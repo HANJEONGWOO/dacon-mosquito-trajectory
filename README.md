@@ -76,6 +76,38 @@ xgboost residual:   R-Hit@1cm=0.6169
 weighted ensemble:  R-Hit@1cm=0.6167
 ```
 
+## Presentation Figures
+
+아래 그림은 발표 자료에 바로 넣을 수 있도록 `docs/figures/`에 PNG로 저장했습니다. 새 실험 결과가 생기면 다음 명령으로 다시 생성할 수 있습니다.
+
+```bash
+.venv/bin/python scripts/make_figures.py
+```
+
+### Model Performance
+
+검증 기준 성능과 DACON public leaderboard 점수를 함께 비교한 그래프입니다.
+
+![Model performance comparison](docs/figures/performance_comparison.png)
+
+### Hit Rate Curve
+
+반경이 커질 때 모델별 hit rate가 어떻게 변하는지 보여줍니다. 빨간 점선은 공식 평가 반경인 1cm입니다.
+
+![Hit rate curve](docs/figures/hit_curve.png)
+
+### Example Trajectory
+
+관측된 11개 좌표와 +80ms 실제 좌표, 물리식 예측, XGBoost 보정 예측을 한 샘플에서 비교했습니다.
+
+![Trajectory example](docs/figures/trajectory_example.png)
+
+### Pipeline Overview
+
+전체 접근 흐름을 발표용 도식으로 정리했습니다.
+
+![Pipeline overview](docs/figures/pipeline_overview.png)
+
 ## Current Result
 
 현재 `--profile strong --gpu` 실행 결과, 최종 제출 파일은 `outputs/submission_best.csv`입니다. 선택된 모델은 `xgboost_scaled`이며, 물리 기반 예측값에 XGBoost 잔차 예측을 scale `0.425`로 반영합니다.
