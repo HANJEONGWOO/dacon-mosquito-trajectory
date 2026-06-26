@@ -76,6 +76,18 @@ xgboost residual:   R-Hit@1cm=0.6169
 weighted ensemble:  R-Hit@1cm=0.6167
 ```
 
+## Why Machine Learning, Not Deep Learning
+
+이 프로젝트에서는 딥러닝 시계열 모델보다 XGBoost/ExtraTrees 같은 머신러닝 모델이 문제 구조에 더 잘 맞는다고 판단했습니다.
+
+- 입력 시계열이 11개 시점으로 매우 짧아 LSTM/Transformer가 장기 패턴을 학습할 이점이 작습니다.
+- 예측 시점이 +80ms, 즉 정확히 2 step 뒤라 최근 속도와 가속도 기반 외삽이 이미 강한 기준선입니다.
+- 학습 샘플 10,000개는 tabular boosting에는 충분하지만, 큰 딥러닝 모델에는 과적합 위험이 있습니다.
+- 평가 지표가 평균 오차가 아니라 `R-Hit@1cm`이므로, 물리식 잔차를 보정한 뒤 scale을 조정하는 방식이 지표 최적화에 유리했습니다.
+- 상대 좌표, 속도, 가속도, window 통계, 다항 외삽값처럼 사람이 설계한 feature가 문제 정보를 잘 드러내므로 tree boosting 계열이 안정적으로 성능을 냈습니다.
+
+따라서 접근 방향은 `물리 기반 예측으로 큰 움직임을 설명하고, 머신러닝으로 남은 잔차만 보정하는 방식`으로 정리했습니다.
+
 ## Presentation Figures
 
 아래 그림은 발표 자료에 바로 넣을 수 있도록 `docs/figures/`에 PNG로 저장했습니다. 새 실험 결과가 생기면 다음 명령으로 다시 생성할 수 있습니다.
