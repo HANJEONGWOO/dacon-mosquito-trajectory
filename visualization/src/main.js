@@ -136,9 +136,20 @@ const elements = {
   healthFill: document.querySelector("#health-fill"),
   healthTrack: document.querySelector(".health-track"),
   resetBaseHealth: document.querySelector("#reset-base-health"),
+  destroyedCount: document.querySelector("#destroyed-count"),
+  victoryTargetDisplay: document.querySelector("#victory-target-display"),
+  missionTrack: document.querySelector(".mission-track"),
+  missionFill: document.querySelector("#mission-fill"),
   decreaseFleet: document.querySelector("#decrease-fleet"),
   increaseFleet: document.querySelector("#increase-fleet"),
   fleetSize: document.querySelector("#fleet-size"),
+  decreaseVictoryTarget: document.querySelector("#decrease-victory-target"),
+  increaseVictoryTarget: document.querySelector("#increase-victory-target"),
+  victoryTarget: document.querySelector("#victory-target"),
+  victoryOutro: document.querySelector("#victory-outro"),
+  victoryDestroyed: document.querySelector("#victory-destroyed"),
+  victoryBaseHealth: document.querySelector("#victory-base-health"),
+  restartDefense: document.querySelector("#restart-defense"),
 };
 
 const state = {
@@ -161,7 +172,12 @@ const state = {
   fleetSize: 5,
   started: false,
   selectedHeroes: [],
+  destroyedDrones: 0,
+  victoryTarget: 10,
+  victory: false,
 };
+
+let victoryTimer = null;
 
 const renderer = new THREE.WebGLRenderer({
   antialias: true,
@@ -1131,6 +1147,85 @@ function updateBaseHealth() {
   elements.baseStatus.classList.toggle("critical", health <= 20);
 }
 
+function formatDroneCount(count) {
+  return `${count} ${count === 1 ? "DRONE" : "DRONES"}`;
+}
+
+function updateMissionProgress() {
+  const progress = Math.min(state.destroyedDrones / state.victoryTarget, 1);
+  elements.destroyedCount.textContent = String(state.destroyedDrones);
+  elements.victoryTargetDisplay.textContent = String(state.victoryTarget);
+  elements.victoryTarget.textContent = formatDroneCount(state.victoryTarget);
+  elements.missionFill.style.width = `${progress * 100}%`;
+  elements.missionTrack.setAttribute("aria-valuemax", String(state.victoryTarget));
+  elements.missionTrack.setAttribute("aria-valuenow", String(state.destroyedDrones));
+  elements.decreaseVictoryTarget.disabled = state.victoryTarget <= 1;
+  elements.increaseVictoryTarget.disabled = state.victoryTarget >= 50;
+}
+
+function showVictoryOutro() {
+  if (!state.victory) {
+    return;
+  }
+  state.playing = false;
+  state.loopHoldUntil = null;
+  controls.enabled = false;
+  elements.victoryDestroyed.textContent = formatDroneCount(state.destroyedDrones);
+  elements.victoryBaseHealth.textContent = `HP ${state.baseHealth}`;
+  elements.app.classList.add("victory-active");
+  elements.victoryOutro.hidden = false;
+  window.requestAnimationFrame(() => {
+    elements.victoryOutro.classList.add("active");
+  });
+  camera.position.set(8.2, 5.3, 9.5);
+  controls.target.set(0, state.floorY + 0.85, 0);
+  controls.update();
+}
+
+function scheduleVictory() {
+  if (state.victory || state.destroyedDrones < state.victoryTarget) {
+    return;
+  }
+  state.victory = true;
+  window.clearTimeout(victoryTimer);
+  victoryTimer = window.setTimeout(showVictoryOutro, 1050);
+}
+
+function recordDroneDestroyed() {
+  if (state.outcome?.destroyedRecorded) {
+    return;
+  }
+  if (state.outcome) {
+    state.outcome.destroyedRecorded = true;
+  }
+  state.destroyedDrones += 1;
+  updateMissionProgress();
+  scheduleVictory();
+}
+
+function setVictoryTarget(target) {
+  state.victoryTarget = THREE.MathUtils.clamp(Math.round(target), 1, 50);
+  updateMissionProgress();
+  scheduleVictory();
+}
+
+function restartDefense() {
+  window.clearTimeout(victoryTimer);
+  victoryTimer = null;
+  state.victory = false;
+  state.destroyedDrones = 0;
+  updateMissionProgress();
+  resetBaseHealth();
+  elements.victoryOutro.classList.remove("active");
+  elements.app.classList.remove("victory-active");
+  controls.enabled = true;
+  window.setTimeout(() => {
+    elements.victoryOutro.hidden = true;
+  }, 420);
+  resetCamera();
+  restartPlayback();
+}
+
 function damageBase() {
   state.baseHealth = Math.max(0, state.baseHealth - 1);
   updateBaseHealth();
@@ -1799,6 +1894,7 @@ function updateHeroInterception(effect, elapsed) {
 
   if (attackProgress >= 1 && !state.outcome.impactApplied) {
     state.outcome.impactApplied = true;
+    recordDroneDestroyed();
     effect.attack.visible = false;
     effect.attackBeam.material.opacity = 0;
     effect.particles.visible = true;
@@ -1870,6 +1966,7 @@ function updateOutcomeEffect(now) {
 
     if (elapsed >= effect.flightDuration && !state.outcome.impactApplied) {
       state.outcome.impactApplied = true;
+      recordDroneDestroyed();
       effect.particles.visible = true;
       effect.shockwave.visible = true;
       effect.core.visible = true;
@@ -2626,6 +2723,13 @@ function bindEvents() {
   elements.increaseFleet.addEventListener("click", () => {
     setFleetSize(state.fleetSize + 1);
   });
+  elements.decreaseVictoryTarget.addEventListener("click", () => {
+    setVictoryTarget(state.victoryTarget - 1);
+  });
+  elements.increaseVictoryTarget.addEventListener("click", () => {
+    setVictoryTarget(state.victoryTarget + 1);
+  });
+  elements.restartDefense.addEventListener("click", restartDefense);
 
   window.addEventListener("keydown", (event) => {
     if (event.target instanceof HTMLInputElement) {
@@ -2752,5 +2856,6 @@ async function loadData() {
 
 createIcons({ icons: ICONS });
 updateBaseHealth();
+updateMissionProgress();
 loadData();
 requestAnimationFrame(animate);

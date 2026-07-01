@@ -130,6 +130,8 @@ weighted ensemble:  R-Hit@1cm=0.6167
 
 ![Interactive UAV trajectory visualization](docs/figures/drone_visualization.png)
 
+![DX Defense victory outro](docs/figures/dx_defense_victory.png)
+
 ```bash
 cd ~/git/dacon-mosquito-trajectory/visualization
 npm install
@@ -143,6 +145,8 @@ npm run dev
 - 이준우(기술 장갑), 이채은(잠입), 차영범(전격), 한정우(방어 지휘)를 0~4명 자유롭게 편성
 - 영웅 선택 시 전투 초상화 전환, 캐릭터별 한국어 기합과 에너지 충격음 재생
 - 선택 영웅의 3D 호위 비행과 MISS 발생 시 무작위 영웅 고유 공격·드론 파괴
+- 기본 10대인 승리 목표 설정, 파괴 진행률 HUD와 목표 달성 아웃트로
+- 승리 시 디지털시티·네 영웅·최종 전적과 함께 표시되는 엔딩 메시지
 - 서로 다른 궤적을 동시에 비행하는 다중 3D 드론(1~10대 설정, 기본 5대)
 - `submission_best.csv`, `submission_physics.csv`, `submission_ensemble.csv` 예측 비교
 - 기본 2배속 재생과 비행 편대 크기만큼 다음 Track 묶음 자동 진행

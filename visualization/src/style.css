@@ -755,6 +755,36 @@ input:focus-visible {
   transition: width 260ms ease, background 260ms ease;
 }
 
+.mission-row {
+  display: flex;
+  justify-content: space-between;
+  margin: 8px 0 4px;
+  color: var(--muted);
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.mission-row strong {
+  color: var(--cyan);
+  font-size: 10px;
+}
+
+.mission-track {
+  width: 100%;
+  height: 4px;
+  overflow: hidden;
+  background: rgba(130, 156, 146, 0.16);
+}
+
+.mission-fill {
+  width: 0;
+  height: 100%;
+  background: var(--cyan);
+  box-shadow: 0 0 8px rgba(76, 227, 206, 0.56);
+  transition: width 280ms ease;
+}
+
 .base-status.warning {
   border-bottom-color: var(--amber);
 }
@@ -1144,6 +1174,39 @@ button svg {
   font-weight: 900;
 }
 
+.victory-control {
+  margin-top: 12px;
+}
+
+.victory-stepper {
+  display: grid;
+  grid-template-columns: 34px 1fr 34px;
+  height: 34px;
+  overflow: hidden;
+  background: rgba(2, 8, 7, 0.58);
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+}
+
+.victory-stepper .icon-button {
+  width: 100%;
+  height: 32px;
+  border: 0;
+  border-radius: 0;
+}
+
+.victory-stepper output {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--amber);
+  border-right: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 10px;
+  font-weight: 900;
+}
+
 .command-button {
   width: 100%;
   height: 34px;
@@ -1422,6 +1485,211 @@ button svg {
   color: var(--cyan);
 }
 
+.victory-outro {
+  position: absolute;
+  z-index: 26;
+  inset: 0;
+  overflow: hidden;
+  background: rgba(2, 9, 8, 0.84);
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 520ms ease, visibility 520ms ease;
+}
+
+.victory-outro::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 5.5%;
+  width: 1px;
+  background: rgba(76, 227, 206, 0.3);
+  content: "";
+}
+
+.victory-outro.active {
+  visibility: visible;
+  opacity: 1;
+}
+
+.victory-copy {
+  position: absolute;
+  z-index: 2;
+  top: 13%;
+  left: 8%;
+  width: 43%;
+}
+
+.victory-copy > span {
+  color: var(--amber);
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.victory-copy h1 {
+  margin: 17px 0 24px;
+  font-size: 58px;
+  line-height: 1.08;
+  font-weight: 900;
+}
+
+.victory-copy > p {
+  margin: 0;
+  color: #d2e1db;
+  font-size: 17px;
+  line-height: 1.75;
+}
+
+.victory-copy blockquote {
+  margin: 24px 0 0;
+  padding: 14px 0 14px 18px;
+  color: #9fb7ad;
+  border-left: 3px solid var(--cyan);
+  font-size: 13px;
+  line-height: 1.75;
+}
+
+.victory-summary {
+  display: flex;
+  gap: 44px;
+  margin-top: 28px;
+}
+
+.victory-summary span,
+.victory-summary strong {
+  display: block;
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+}
+
+.victory-summary span {
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.victory-summary strong {
+  margin-top: 5px;
+  color: var(--cyan);
+  font-size: 14px;
+}
+
+.restart-defense {
+  min-width: 180px;
+  height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  margin-top: 28px;
+  color: #03110e;
+  background: var(--cyan);
+  border: 1px solid var(--cyan);
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.restart-defense:hover {
+  background: var(--amber);
+  border-color: var(--amber);
+}
+
+.victory-heroes {
+  position: absolute;
+  z-index: 1;
+  top: 10%;
+  right: 3%;
+  bottom: 62px;
+  left: 48%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 7px;
+  pointer-events: none;
+}
+
+.victory-heroes figure {
+  position: relative;
+  width: 24%;
+  height: 76%;
+  margin: 0;
+  overflow: hidden;
+  background: #07110f;
+  border-top: 3px solid var(--cyan);
+  clip-path: polygon(9% 0, 100% 0, 100% 95%, 91% 100%, 0 100%, 0 5%);
+  box-shadow: 0 0 24px rgba(76, 227, 206, 0.13);
+  animation: victory-hero-rise 620ms ease-out both;
+}
+
+.victory-heroes figure:nth-child(2) {
+  height: 86%;
+  animation-delay: 90ms;
+}
+
+.victory-heroes figure:nth-child(3) {
+  height: 90%;
+  animation-delay: 180ms;
+}
+
+.victory-heroes figure:nth-child(4) {
+  height: 80%;
+  animation-delay: 270ms;
+}
+
+.victory-heroes img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center 23%;
+  opacity: 0.82;
+}
+
+.victory-heroes figcaption {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 10px 8px;
+  color: var(--text);
+  background: rgba(3, 12, 10, 0.9);
+  font-size: 11px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.victory-footer {
+  position: absolute;
+  z-index: 3;
+  right: 4%;
+  bottom: 24px;
+  left: 8%;
+  display: flex;
+  justify-content: space-between;
+  padding-top: 11px;
+  color: #6f877d;
+  border-top: 1px solid var(--line);
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 8px;
+}
+
+.victory-footer strong {
+  color: var(--green);
+}
+
+#app.victory-active .topbar,
+#app.victory-active .base-status,
+#app.victory-active .telemetry-panel,
+#app.victory-active .control-panel,
+#app.victory-active .legend,
+#app.victory-active .timeline-panel,
+#app.victory-active .outcome-overlay {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .outcome-overlay p {
   margin: 7px 0 0;
   color: var(--text);
@@ -1521,6 +1789,17 @@ button svg {
   100% {
     filter: brightness(1) saturate(1);
     transform: scale(1.025);
+  }
+}
+
+@keyframes victory-hero-rise {
+  from {
+    opacity: 0;
+    transform: translateY(36px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 

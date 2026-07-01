@@ -145,6 +145,13 @@
         <div class="health-track" role="progressbar" aria-label="기지 체력" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100">
           <div id="health-fill" class="health-fill"></div>
         </div>
+        <div class="mission-row">
+          <span>DRONES DESTROYED</span>
+          <strong><b id="destroyed-count">0</b> / <b id="victory-target-display">10</b></strong>
+        </div>
+        <div class="mission-track" role="progressbar" aria-label="승리 목표 진행률" aria-valuemin="0" aria-valuemax="10" aria-valuenow="0">
+          <div id="mission-fill" class="mission-fill"></div>
+        </div>
       </section>
 
       <aside class="telemetry-panel" aria-label="비행체 텔레메트리">
@@ -255,6 +262,18 @@
             </button>
           </div>
         </div>
+        <div class="victory-control">
+          <span class="control-label">VICTORY TARGET</span>
+          <div class="victory-stepper">
+            <button id="decrease-victory-target" class="icon-button" type="button" aria-label="승리 목표 감소" title="승리 목표 감소">
+              <i data-lucide="minus"></i>
+            </button>
+            <output id="victory-target">10 DRONES</output>
+            <button id="increase-victory-target" class="icon-button" type="button" aria-label="승리 목표 증가" title="승리 목표 증가">
+              <i data-lucide="plus"></i>
+            </button>
+          </div>
+        </div>
       </section>
 
       <div class="legend" aria-label="궤적 범례">
@@ -297,6 +316,56 @@
         <span id="outcome-kicker">R-HIT@1CM</span>
         <strong id="outcome-title">HIT</strong>
         <p id="outcome-detail">ERROR 0.00 cm</p>
+      </section>
+
+      <section id="victory-outro" class="victory-outro" aria-labelledby="victory-title" hidden>
+        <div class="victory-copy">
+          <span>MISSION COMPLETE · SUWON DIGITAL CITY</span>
+          <h1 id="victory-title">디지털시티를<br />지켜냈습니다</h1>
+          <p>우리가 지켜낸 것은 건물이 아니라,<br />내일을 만드는 사람들의 평범한 하루입니다.</p>
+          <blockquote>
+            정확한 예측은 기술에서 시작되지만,<br />
+            끝까지 지켜내는 힘은 함께하는 사람에게서 나옵니다.
+          </blockquote>
+          <div class="victory-summary">
+            <div>
+              <span>DESTROYED</span>
+              <strong id="victory-destroyed">10 DRONES</strong>
+            </div>
+            <div>
+              <span>BASE STATUS</span>
+              <strong id="victory-base-health">HP 100</strong>
+            </div>
+          </div>
+          <button id="restart-defense" class="restart-defense" type="button">
+            <i data-lucide="rotate-ccw"></i>
+            다시 방어하기
+          </button>
+        </div>
+
+        <div class="victory-heroes" aria-label="DX 디펜스 영웅">
+          <figure>
+            <img src="/assets/heroes/lee-junwoo-selected.webp" alt="이준우 아크 엔지니어" />
+            <figcaption>이준우</figcaption>
+          </figure>
+          <figure>
+            <img src="/assets/heroes/lee-chaeeun-selected.webp" alt="이채은 스텔스 오퍼레이터" />
+            <figcaption>이채은</figcaption>
+          </figure>
+          <figure>
+            <img src="/assets/heroes/cha-youngbeom-selected.webp" alt="차영범 썬더 가디언" />
+            <figcaption>차영범</figcaption>
+          </figure>
+          <figure>
+            <img src="/assets/heroes/han-jungwoo-selected.webp" alt="한정우 실드 커맨더" />
+            <figcaption>한정우</figcaption>
+          </figure>
+        </div>
+
+        <footer class="victory-footer">
+          <span>DX DEFENSE · TRAJECTORY PREDICTION SYSTEM</span>
+          <strong>TOGETHER, WE PROTECT TOMORROW.</strong>
+        </footer>
       </section>
 
       <div id="loading-state" class="loading-state">
