@@ -74,6 +74,11 @@ const elements = {
   outcomeKicker: document.querySelector("#outcome-kicker"),
   outcomeTitle: document.querySelector("#outcome-title"),
   outcomeDetail: document.querySelector("#outcome-detail"),
+  baseStatus: document.querySelector("#base-status"),
+  baseHealth: document.querySelector("#base-health"),
+  healthFill: document.querySelector("#health-fill"),
+  healthTrack: document.querySelector(".health-track"),
+  resetBaseHealth: document.querySelector("#reset-base-health"),
 };
 
 const state = {
@@ -92,6 +97,7 @@ const state = {
   sceneScale: 1,
   floorY: -2,
   outcome: null,
+  baseHealth: 100,
 };
 
 const renderer = new THREE.WebGLRenderer({
@@ -148,6 +154,9 @@ scene.add(radarGroup);
 
 const axesGroup = createAxes();
 scene.add(axesGroup);
+
+const defenseBase = createDefenseBase();
+scene.add(defenseBase.group);
 
 const trajectoryGroup = new THREE.Group();
 scene.add(trajectoryGroup);
@@ -263,6 +272,167 @@ function makeTextSprite(text, color) {
   const sprite = new THREE.Sprite(material);
   sprite.scale.set(1.8, 0.45, 1);
   return sprite;
+}
+
+function createDefenseBase() {
+  const group = new THREE.Group();
+  group.name = "suwon-digital-city-dx";
+
+  const concreteMaterial = new THREE.MeshStandardMaterial({
+    color: 0x52605c,
+    roughness: 0.72,
+    metalness: 0.18,
+  });
+  const glassMaterial = new THREE.MeshStandardMaterial({
+    color: 0x173f4a,
+    roughness: 0.18,
+    metalness: 0.74,
+    emissive: 0x09252b,
+    emissiveIntensity: 0.55,
+  });
+  const windowMaterial = new THREE.MeshStandardMaterial({
+    color: 0xa8e5e7,
+    roughness: 0.25,
+    metalness: 0.46,
+    emissive: 0x3d878b,
+    emissiveIntensity: 0.72,
+  });
+  const accentMaterial = new THREE.MeshStandardMaterial({
+    color: COLORS.white,
+    roughness: 0.52,
+    metalness: 0.34,
+    emissive: 0x1b3230,
+    emissiveIntensity: 0.25,
+  });
+
+  const platform = new THREE.Mesh(
+    new THREE.BoxGeometry(3.15, 0.09, 2.15),
+    concreteMaterial,
+  );
+  platform.position.y = 0.045;
+  platform.receiveShadow = true;
+  group.add(platform);
+
+  const plaza = new THREE.Mesh(
+    new THREE.CircleGeometry(1.08, 48),
+    new THREE.MeshStandardMaterial({
+      color: 0x24332f,
+      roughness: 0.88,
+      metalness: 0.08,
+    }),
+  );
+  plaza.rotation.x = -Math.PI / 2;
+  plaza.position.set(0, 0.095, 0.2);
+  plaza.receiveShadow = true;
+  group.add(plaza);
+
+  function addTower(x, z, width, depth, height, floors) {
+    const tower = new THREE.Group();
+    tower.position.set(x, 0.09, z);
+
+    const shell = new THREE.Mesh(
+      new THREE.BoxGeometry(width, height, depth),
+      glassMaterial,
+    );
+    shell.position.y = height / 2;
+    shell.castShadow = true;
+    shell.receiveShadow = true;
+    tower.add(shell);
+
+    const crown = new THREE.Mesh(
+      new THREE.BoxGeometry(width + 0.08, 0.055, depth + 0.08),
+      accentMaterial,
+    );
+    crown.position.y = height + 0.025;
+    tower.add(crown);
+
+    for (let floor = 1; floor < floors; floor += 1) {
+      const y = (height * floor) / floors;
+      const frontStrip = new THREE.Mesh(
+        new THREE.BoxGeometry(width * 0.82, 0.018, 0.012),
+        windowMaterial,
+      );
+      frontStrip.position.set(0, y, depth / 2 + 0.008);
+      const backStrip = frontStrip.clone();
+      backStrip.position.z = -depth / 2 - 0.008;
+      tower.add(frontStrip, backStrip);
+    }
+
+    for (const side of [-1, 1]) {
+      const fin = new THREE.Mesh(
+        new THREE.BoxGeometry(0.035, height + 0.04, depth + 0.06),
+        accentMaterial,
+      );
+      fin.position.set(side * width / 2, height / 2, 0);
+      tower.add(fin);
+    }
+
+    group.add(tower);
+    return tower;
+  }
+
+  addTower(0, 0.12, 0.78, 0.54, 1.18, 9);
+  addTower(-0.72, 0.22, 0.48, 0.42, 0.88, 7);
+  addTower(0.72, 0.22, 0.48, 0.42, 0.98, 8);
+
+  const researchWing = new THREE.Mesh(
+    new THREE.BoxGeometry(2.25, 0.32, 0.58),
+    accentMaterial,
+  );
+  researchWing.position.set(0, 0.25, -0.48);
+  researchWing.castShadow = true;
+  group.add(researchWing);
+
+  const wingGlass = new THREE.Mesh(
+    new THREE.BoxGeometry(1.95, 0.13, 0.012),
+    windowMaterial,
+  );
+  wingGlass.position.set(0, 0.26, -0.776);
+  group.add(wingGlass);
+
+  const antenna = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.012, 0.018, 0.35, 8),
+    accentMaterial,
+  );
+  antenna.position.set(0, 1.44, 0.12);
+  group.add(antenna);
+
+  const beacon = new THREE.Mesh(
+    new THREE.SphereGeometry(0.035, 12, 8),
+    new THREE.MeshBasicMaterial({ color: COLORS.green }),
+  );
+  beacon.position.set(0, 1.63, 0.12);
+  group.add(beacon);
+
+  const perimeter = new THREE.Mesh(
+    new THREE.RingGeometry(1.45, 1.49, 64),
+    new THREE.MeshBasicMaterial({
+      color: COLORS.green,
+      transparent: true,
+      opacity: 0.58,
+      side: THREE.DoubleSide,
+    }),
+  );
+  perimeter.rotation.x = -Math.PI / 2;
+  perimeter.position.y = 0.105;
+  group.add(perimeter);
+
+  const label = makeTextSprite("SAMSUNG DIGITAL CITY · DX", "#78db8d");
+  label.position.set(0, 1.43, 0.42);
+  label.scale.set(1.4, 0.35, 1);
+  group.add(label);
+
+  group.scale.setScalar(0.82);
+  return {
+    group,
+    glassMaterial,
+    windowMaterial,
+    accentMaterial,
+    perimeter,
+    beacon,
+    attackPoint: new THREE.Vector3(0, 0.78, 0.08),
+    launchPoint: new THREE.Vector3(0, 1.68, 0.12),
+  };
 }
 
 function createDrone() {
@@ -414,6 +584,77 @@ function clearOutcomeEffects() {
   drone.glow.intensity = 1.1;
   drone.group.visible = true;
   setTargetColor(COLORS.coral);
+  defenseBase.group.position.x = 0;
+  defenseBase.group.position.z = 0;
+  setBaseAlert(false);
+}
+
+function baseTargetWorld() {
+  defenseBase.group.updateMatrixWorld(true);
+  return defenseBase.group.localToWorld(defenseBase.attackPoint.clone());
+}
+
+function baseLaunchWorld() {
+  defenseBase.group.updateMatrixWorld(true);
+  return defenseBase.group.localToWorld(defenseBase.launchPoint.clone());
+}
+
+function setBaseFiring(firing) {
+  if (!firing) {
+    setBaseAlert(false);
+    return;
+  }
+  defenseBase.glassMaterial.emissive.setHex(0x0e554a);
+  defenseBase.glassMaterial.emissiveIntensity = 0.95;
+  defenseBase.windowMaterial.color.setHex(COLORS.green);
+  defenseBase.windowMaterial.emissive.setHex(0x2d8c5a);
+  defenseBase.windowMaterial.emissiveIntensity = 1.45;
+  defenseBase.perimeter.material.color.setHex(COLORS.cyan);
+  defenseBase.beacon.material.color.setHex(COLORS.amber);
+}
+
+function setBaseAlert(alert) {
+  if (alert) {
+    defenseBase.glassMaterial.emissive.setHex(0x7f0804);
+    defenseBase.glassMaterial.emissiveIntensity = 1.15;
+    defenseBase.windowMaterial.color.setHex(COLORS.coral);
+    defenseBase.windowMaterial.emissive.setHex(0x8f0905);
+    defenseBase.windowMaterial.emissiveIntensity = 1.5;
+    defenseBase.perimeter.material.color.setHex(COLORS.red);
+    defenseBase.beacon.material.color.setHex(COLORS.red);
+    return;
+  }
+
+  defenseBase.glassMaterial.emissive.setHex(0x09252b);
+  defenseBase.glassMaterial.emissiveIntensity = 0.55;
+  defenseBase.windowMaterial.color.setHex(0xa8e5e7);
+  defenseBase.windowMaterial.emissive.setHex(0x3d878b);
+  defenseBase.windowMaterial.emissiveIntensity = 0.72;
+  defenseBase.perimeter.material.color.setHex(COLORS.green);
+  defenseBase.beacon.material.color.setHex(COLORS.green);
+}
+
+function updateBaseHealth() {
+  const health = THREE.MathUtils.clamp(state.baseHealth, 0, 100);
+  elements.baseHealth.textContent = String(health);
+  elements.healthFill.style.width = `${health}%`;
+  elements.healthTrack.setAttribute("aria-valuenow", String(health));
+  elements.baseStatus.classList.toggle("warning", health <= 50 && health > 20);
+  elements.baseStatus.classList.toggle("critical", health <= 20);
+}
+
+function damageBase() {
+  state.baseHealth = Math.max(0, state.baseHealth - 1);
+  updateBaseHealth();
+  elements.baseStatus.classList.remove("damaged");
+  void elements.baseStatus.offsetWidth;
+  elements.baseStatus.classList.add("damaged");
+  window.setTimeout(() => elements.baseStatus.classList.remove("damaged"), 460);
+}
+
+function resetBaseHealth() {
+  state.baseHealth = 100;
+  updateBaseHealth();
 }
 
 function calculateViewTransform(sample) {
@@ -448,6 +689,10 @@ function calculateViewTransform(sample) {
   grid.position.y = state.floorY;
   radarGroup.position.y = state.floorY + 0.015;
   axesGroup.position.set(-5.2, state.floorY + 0.04, 4.6);
+  defenseBase.group.position.set(0, state.floorY, 0);
+  if (window.innerWidth <= 760) {
+    controls.target.y = state.floorY + 0.95;
+  }
   elements.visualScale.textContent = `x${Math.round(state.sceneScale)}`;
 }
 
@@ -503,6 +748,71 @@ function setTargetColor(color) {
 function createHitExplosion(origin) {
   const group = new THREE.Group();
   group.position.copy(origin);
+  const launch = baseLaunchWorld().sub(origin);
+  const impact = new THREE.Vector3(0, 0, 0);
+  const flightDuration = 1.05;
+  const flightDirection = impact.clone().sub(launch).normalize();
+
+  const interceptor = new THREE.Mesh(
+    new THREE.ConeGeometry(0.11, 0.52, 8),
+    new THREE.MeshBasicMaterial({
+      color: COLORS.green,
+      transparent: true,
+      opacity: 1,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    }),
+  );
+  interceptor.position.copy(launch);
+  interceptor.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), flightDirection);
+  const interceptorLight = new THREE.PointLight(COLORS.amber, 4.5, 4);
+  interceptor.add(interceptorLight);
+  group.add(interceptor);
+
+  const launchBeam = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.028, 0.045, 1, 8),
+    new THREE.MeshBasicMaterial({
+      color: COLORS.cyan,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    }),
+  );
+  launchBeam.position.copy(launch).multiplyScalar(0.5);
+  launchBeam.quaternion.copy(interceptor.quaternion);
+  launchBeam.scale.y = launch.length();
+  group.add(launchBeam);
+
+  const launchGlow = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.07, 0.1, 1, 10),
+    new THREE.MeshBasicMaterial({
+      color: COLORS.green,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    }),
+  );
+  launchGlow.position.copy(launchBeam.position);
+  launchGlow.quaternion.copy(launchBeam.quaternion);
+  launchGlow.scale.y = launch.length();
+  group.add(launchGlow);
+
+  const trail = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([launch, launch]),
+    new THREE.LineBasicMaterial({
+      color: COLORS.green,
+      transparent: true,
+      opacity: 0.88,
+      blending: THREE.AdditiveBlending,
+    }),
+  );
+  group.add(trail);
+
+  const launchLight = new THREE.PointLight(COLORS.green, 5, 7);
+  launchLight.position.copy(launch);
+  group.add(launchLight);
 
   const particleCount = 180;
   const positions = new Float32Array(particleCount * 3);
@@ -536,67 +846,80 @@ function createHitExplosion(origin) {
     size: 0.13,
     vertexColors: true,
     transparent: true,
-    opacity: 1,
+    opacity: 0,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
   });
   const particles = new THREE.Points(particleGeometry, particleMaterial);
+  particles.visible = false;
   group.add(particles);
 
-  const shockwave = new THREE.Mesh(
-    new THREE.RingGeometry(0.42, 0.54, 64),
-    new THREE.MeshBasicMaterial({
+  const shockwaveCurve = new THREE.EllipseCurve(0, 0, 0.5, 0.5, 0, Math.PI * 2);
+  const shockwave = new THREE.LineLoop(
+    new THREE.BufferGeometry().setFromPoints(shockwaveCurve.getPoints(72)),
+    new THREE.LineBasicMaterial({
       color: COLORS.amber,
       transparent: true,
-      opacity: 0.95,
-      side: THREE.DoubleSide,
-      depthWrite: false,
+      opacity: 0,
       blending: THREE.AdditiveBlending,
     }),
   );
   shockwave.quaternion.copy(camera.quaternion);
+  shockwave.visible = false;
   group.add(shockwave);
 
   const core = new THREE.Mesh(
-    new THREE.SphereGeometry(0.36, 24, 18),
+    new THREE.IcosahedronGeometry(0.3, 1),
     new THREE.MeshBasicMaterial({
       color: COLORS.white,
-      transparent: true,
-      opacity: 0.9,
-      depthWrite: false,
+      wireframe: true,
       blending: THREE.AdditiveBlending,
     }),
   );
+  core.visible = false;
   group.add(core);
 
-  const light = new THREE.PointLight(COLORS.amber, 6, 10);
+  const light = new THREE.PointLight(COLORS.amber, 0, 10);
   group.add(light);
   effectsGroup.add(group);
-  return { group, particles, velocities, shockwave, core, light };
+  return {
+    group,
+    interceptor,
+    interceptorLight,
+    launch,
+    launchBeam,
+    launchGlow,
+    trail,
+    launchLight,
+    flightDuration,
+    particles,
+    velocities,
+    shockwave,
+    core,
+    light,
+  };
 }
 
 function createCounterattack(origin) {
   const group = new THREE.Group();
   const projectiles = [];
-  const forward = camera.position.clone().sub(origin).normalize();
-  const right = new THREE.Vector3().crossVectors(forward, camera.up).normalize();
+  const target = baseTargetWorld();
+  const forward = target.clone().sub(origin).normalize();
+  const right = new THREE.Vector3()
+    .crossVectors(forward, new THREE.Vector3(0, 1, 0))
+    .normalize();
+  if (right.lengthSq() < 0.001) {
+    right.set(1, 0, 0);
+  }
   const up = new THREE.Vector3().crossVectors(right, forward).normalize();
 
   for (let index = 0; index < 5; index += 1) {
     const delay = index * 0.13;
-    const spread = (index - 2) * 0.12;
-    const rawEnd = camera.position
+    const spread = (index - 2) * 0.045;
+    const end = target
       .clone()
       .addScaledVector(right, spread)
-      .addScaledVector(up, ((index % 2) - 0.5) * 0.22);
-    const attackVector = rawEnd.clone().sub(origin);
-    const attackDistance = Math.min(attackVector.length() * 0.68, 8);
-    const end = origin
-      .clone()
-      .addScaledVector(
-        attackVector.normalize(),
-        attackDistance,
-      );
+      .addScaledVector(up, ((index % 2) - 0.5) * 0.06);
     const projectile = new THREE.Mesh(
       new THREE.CylinderGeometry(0.025, 0.055, 0.52, 8),
       new THREE.MeshBasicMaterial({
@@ -643,8 +966,41 @@ function createCounterattack(origin) {
   const muzzle = new THREE.PointLight(COLORS.red, 5, 8);
   muzzle.position.copy(origin);
   group.add(muzzle);
+
+  const impact = new THREE.Mesh(
+    new THREE.SphereGeometry(0.18, 18, 12),
+    new THREE.MeshBasicMaterial({
+      color: COLORS.red,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    }),
+  );
+  impact.position.copy(target);
+  impact.visible = false;
+  group.add(impact);
+
+  const impactRing = new THREE.Mesh(
+    new THREE.RingGeometry(0.2, 0.25, 40),
+    new THREE.MeshBasicMaterial({
+      color: COLORS.coral,
+      transparent: true,
+      opacity: 0,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    }),
+  );
+  impactRing.position.copy(target);
+  impactRing.visible = false;
+  group.add(impactRing);
+
+  const impactLight = new THREE.PointLight(COLORS.red, 0, 7);
+  impactLight.position.copy(target);
+  group.add(impactLight);
   effectsGroup.add(group);
-  return { group, projectiles, muzzle };
+  return { group, projectiles, muzzle, impact, impactRing, impactLight, target };
 }
 
 function showOutcomeOverlay(type, errorMeters) {
@@ -652,12 +1008,18 @@ function showOutcomeOverlay(type, errorMeters) {
   elements.outcomeOverlay.hidden = false;
   elements.outcomeOverlay.classList.toggle("hit", hit);
   elements.outcomeOverlay.classList.toggle("miss", !hit);
-  elements.outcomeKicker.textContent = hit ? "R-HIT@1CM CONFIRMED" : "R-HIT@1CM FAILED";
-  elements.outcomeTitle.textContent = hit ? "HIT" : "MISS";
+  elements.outcomeKicker.textContent = hit ? "TARGET WITHIN R-HIT@1CM" : "R-HIT@1CM FAILED";
+  elements.outcomeTitle.textContent = hit ? "LOCKED" : "MISS";
   elements.outcomeDetail.textContent = hit
-    ? `ERROR ${(errorMeters * 100).toFixed(2)} cm · IMPACT`
-    : `ERROR ${(errorMeters * 100).toFixed(2)} cm · COUNTERATTACK`;
+    ? `ERROR ${(errorMeters * 100).toFixed(2)} cm · BASE INTERCEPTOR LAUNCHED`
+    : `ERROR ${(errorMeters * 100).toFixed(2)} cm · BASE UNDER ATTACK`;
 
+  if (!hit) {
+    triggerImpactFlash(type);
+  }
+}
+
+function triggerImpactFlash(type) {
   elements.impactFlash.classList.remove("hit", "miss");
   void elements.impactFlash.offsetWidth;
   elements.impactFlash.classList.add(type);
@@ -672,13 +1034,21 @@ function triggerOutcome(now) {
   const type = errorMeters <= HIT_RADIUS_METERS ? "hit" : "miss";
   const origin = toWorld(activeSample().actual);
   const effect = type === "hit" ? createHitExplosion(origin) : createCounterattack(origin);
-  state.outcome = { type, errorMeters, start: now, effect };
+  state.outcome = {
+    type,
+    errorMeters,
+    start: now,
+    effect,
+    damageApplied: false,
+    impactApplied: false,
+  };
   showOutcomeOverlay(type, errorMeters);
   setTargetColor(type === "hit" ? COLORS.amber : COLORS.red);
   errorLine.visible = true;
   elements.forecastDistance.textContent = `${(errorMeters * 100).toFixed(2)} cm`;
 
   if (type === "hit") {
+    setBaseFiring(true);
     drone.bodyMaterial.emissive.setHex(COLORS.amber);
     drone.bodyMaterial.emissiveIntensity = 2;
   } else {
@@ -700,22 +1070,58 @@ function updateOutcomeEffect(now) {
   const { type, effect } = state.outcome;
 
   if (type === "hit") {
-    const positions = effect.particles.geometry.attributes.position.array;
-    for (let index = 0; index < positions.length / 3; index += 1) {
-      positions[index * 3] = effect.velocities[index * 3] * elapsed;
-      positions[index * 3 + 1] =
-        effect.velocities[index * 3 + 1] * elapsed - 1.8 * elapsed * elapsed;
-      positions[index * 3 + 2] = effect.velocities[index * 3 + 2] * elapsed;
+    const flightProgress = THREE.MathUtils.clamp(elapsed / effect.flightDuration, 0, 1);
+    const easedFlight = 1 - Math.pow(1 - flightProgress, 3);
+    effect.interceptor.position.lerpVectors(
+      effect.launch,
+      new THREE.Vector3(0, 0, 0),
+      easedFlight,
+    );
+    effect.interceptor.visible = flightProgress < 1;
+    effect.launchBeam.material.opacity = Math.sin(flightProgress * Math.PI) * 0.92;
+    effect.launchBeam.visible = elapsed < effect.flightDuration + 0.12;
+    effect.launchGlow.material.opacity = Math.sin(flightProgress * Math.PI) * 0.2;
+    effect.launchGlow.visible = elapsed < effect.flightDuration + 0.12;
+    effect.trail.geometry.dispose();
+    effect.trail.geometry = new THREE.BufferGeometry().setFromPoints([
+      effect.launch,
+      effect.interceptor.position,
+    ]);
+    effect.trail.material.opacity = Math.max(0, 0.9 - flightProgress * 0.45);
+    effect.launchLight.intensity = Math.max(0, 5 - elapsed * 5.5);
+
+    if (elapsed >= effect.flightDuration && !state.outcome.impactApplied) {
+      state.outcome.impactApplied = true;
+      effect.particles.visible = true;
+      effect.shockwave.visible = true;
+      effect.core.visible = true;
+      elements.outcomeKicker.textContent = "R-HIT@1CM CONFIRMED";
+      elements.outcomeTitle.textContent = "HIT";
+      elements.outcomeDetail.textContent =
+        `ERROR ${(state.outcome.errorMeters * 100).toFixed(2)} cm · TARGET DESTROYED`;
+      setBaseFiring(false);
     }
-    effect.particles.geometry.attributes.position.needsUpdate = true;
-    effect.particles.material.opacity = Math.max(0, 1 - elapsed / 2.2);
-    const shockScale = 1 + elapsed * 5.5;
-    effect.shockwave.scale.setScalar(shockScale);
-    effect.shockwave.material.opacity = Math.max(0, 0.95 - elapsed / 1.2);
-    effect.core.scale.setScalar(1 + elapsed * 2.2);
-    effect.core.material.opacity = Math.max(0, 0.9 - elapsed * 1.3);
-    effect.light.intensity = Math.max(0, 6 - elapsed * 5);
-    drone.group.visible = elapsed < 0.18;
+
+    const explosionElapsed = Math.max(0, elapsed - effect.flightDuration);
+    if (state.outcome.impactApplied) {
+      const positions = effect.particles.geometry.attributes.position.array;
+      for (let index = 0; index < positions.length / 3; index += 1) {
+        positions[index * 3] = effect.velocities[index * 3] * explosionElapsed;
+        positions[index * 3 + 1] =
+          effect.velocities[index * 3 + 1] * explosionElapsed
+          - 1.8 * explosionElapsed * explosionElapsed;
+        positions[index * 3 + 2] = effect.velocities[index * 3 + 2] * explosionElapsed;
+      }
+      effect.particles.geometry.attributes.position.needsUpdate = true;
+      effect.particles.material.opacity = Math.max(0, 1 - explosionElapsed / 2.2);
+      const shockScale = 1 + explosionElapsed * 5.5;
+      effect.shockwave.scale.setScalar(shockScale);
+      effect.shockwave.material.opacity = Math.max(0, 0.95 - explosionElapsed / 1.2);
+      effect.core.scale.setScalar(1 + explosionElapsed * 2.2);
+      effect.core.visible = explosionElapsed < 0.48;
+      effect.light.intensity = Math.max(0, 6 - explosionElapsed * 5);
+      drone.group.visible = explosionElapsed < 0.18;
+    }
   } else {
     for (const projectile of effect.projectiles) {
       const localTime = Math.max(0, elapsed - projectile.userData.delay);
@@ -739,6 +1145,33 @@ function updateOutcomeEffect(now) {
     }
     effect.muzzle.intensity = 2.5 + Math.sin(elapsed * 34) * 2.5;
     drone.group.rotation.y += Math.sin(elapsed * 24) * 0.012;
+
+    if (elapsed >= 0.8 && !state.outcome.damageApplied) {
+      state.outcome.damageApplied = true;
+      damageBase();
+      setBaseAlert(true);
+    }
+
+    const impactElapsed = Math.max(0, elapsed - 0.8);
+    if (impactElapsed > 0 && impactElapsed < 1.35) {
+      effect.impact.visible = true;
+      effect.impactRing.visible = true;
+      effect.impactRing.quaternion.copy(camera.quaternion);
+      effect.impact.scale.setScalar(1 + impactElapsed * 1.8);
+      effect.impact.material.opacity = Math.max(0, 0.9 - impactElapsed * 0.72);
+      effect.impactRing.scale.setScalar(1 + impactElapsed * 2.8);
+      effect.impactRing.material.opacity = Math.max(0, 0.85 - impactElapsed * 0.65);
+      effect.impactLight.intensity = Math.max(0, 6 - impactElapsed * 4.4);
+      const shake = Math.max(0, 1 - impactElapsed / 0.75) * 0.055;
+      defenseBase.group.position.x = Math.sin(elapsed * 58) * shake;
+      defenseBase.group.position.z = Math.cos(elapsed * 47) * shake;
+    } else if (impactElapsed >= 1.35) {
+      defenseBase.group.position.x = 0;
+      defenseBase.group.position.z = 0;
+      effect.impact.visible = false;
+      effect.impactRing.visible = false;
+      effect.impactLight.intensity = 0;
+    }
   }
 }
 
@@ -934,7 +1367,9 @@ function updateSceneForTime() {
 function updateTelemetry(point, forecasting) {
   const phase = state.outcome
     ? state.outcome.type === "hit"
-      ? "성공"
+      ? state.outcome.impactApplied
+        ? "성공"
+        : "요격"
       : "실패"
     : forecasting
       ? "예측"
@@ -945,8 +1380,10 @@ function updateTelemetry(point, forecasting) {
   elements.phaseBadge.classList.toggle("miss", state.outcome?.type === "miss");
   elements.systemStatus.textContent = state.outcome
     ? state.outcome.type === "hit"
-      ? "HIT CONFIRMED"
-      : "COUNTERATTACK"
+      ? state.outcome.impactApplied
+        ? "HIT CONFIRMED"
+        : "INTERCEPTOR LAUNCHED"
+      : "BASE UNDER ATTACK"
     : forecasting
       ? "FORECAST LINK"
       : "TRACKING LIVE";
@@ -1051,7 +1488,7 @@ function updatePlayButton() {
 
 function resetCamera() {
   camera.position.set(10, 7.5, 11);
-  controls.target.set(0, 0, 0);
+  controls.target.set(0, window.innerWidth <= 760 ? state.floorY + 0.95 : 0, 0);
   controls.update();
 }
 
@@ -1129,6 +1566,7 @@ function bindEvents() {
   });
   elements.restart.addEventListener("click", restartPlayback);
   elements.resetCamera.addEventListener("click", resetCamera);
+  elements.resetBaseHealth.addEventListener("click", resetBaseHealth);
 
   window.addEventListener("keydown", (event) => {
     if (event.target instanceof HTMLInputElement) {
@@ -1233,5 +1671,6 @@ async function loadData() {
 }
 
 createIcons({ icons: ICONS });
+updateBaseHealth();
 loadData();
 requestAnimationFrame(animate);

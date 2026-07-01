@@ -29,6 +29,26 @@
         </div>
       </header>
 
+      <section id="base-status" class="base-status" aria-label="수원 삼성 디지털시티 기지 상태">
+        <div class="base-heading">
+          <span class="base-beacon" aria-hidden="true"></span>
+          <div>
+            <span>DEFENSE BASE</span>
+            <strong>SUWON DIGITAL CITY · DX</strong>
+          </div>
+          <button id="reset-base-health" class="icon-button" type="button" aria-label="기지 체력 초기화" title="기지 체력 초기화">
+            <i data-lucide="rotate-ccw"></i>
+          </button>
+        </div>
+        <div class="health-row">
+          <span>BASE HP</span>
+          <strong><b id="base-health">100</b> / 100</strong>
+        </div>
+        <div class="health-track" role="progressbar" aria-label="기지 체력" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100">
+          <div id="health-fill" class="health-fill"></div>
+        </div>
+      </section>
+
       <aside class="telemetry-panel" aria-label="비행체 텔레메트리">
         <div class="panel-kicker">TRACK TELEMETRY</div>
         <div class="track-heading">

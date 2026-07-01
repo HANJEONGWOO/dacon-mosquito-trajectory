@@ -156,7 +156,8 @@ input:focus-visible {
 }
 
 .telemetry-panel,
-.control-panel {
+.control-panel,
+.base-status {
   position: absolute;
   z-index: 8;
   top: 84px;
@@ -164,6 +165,126 @@ input:focus-visible {
   background: var(--surface);
   border: 1px solid var(--line);
   backdrop-filter: blur(12px);
+}
+
+.base-status {
+  left: 50%;
+  width: 330px;
+  padding: 11px 13px 12px;
+  transform: translateX(-50%);
+  border-bottom: 3px solid var(--green);
+}
+
+.base-heading,
+.health-row {
+  display: flex;
+  align-items: center;
+}
+
+.base-heading {
+  gap: 9px;
+}
+
+.base-heading > div {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.base-heading span,
+.health-row span {
+  display: block;
+  color: var(--muted);
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.base-heading strong {
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--text);
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.base-beacon {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 24px;
+  background: var(--green);
+  box-shadow: 0 0 13px rgba(120, 219, 141, 0.55);
+}
+
+.base-heading .icon-button {
+  width: 28px;
+  height: 28px;
+}
+
+.health-row {
+  justify-content: space-between;
+  margin: 8px 0 5px;
+}
+
+.health-row strong {
+  color: var(--green);
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 11px;
+}
+
+.health-row b {
+  font-weight: 900;
+}
+
+.health-track {
+  width: 100%;
+  height: 6px;
+  overflow: hidden;
+  background: rgba(130, 156, 146, 0.16);
+  border: 1px solid rgba(130, 156, 146, 0.24);
+}
+
+.health-fill {
+  width: 100%;
+  height: 100%;
+  background: var(--green);
+  box-shadow: 0 0 9px rgba(120, 219, 141, 0.5);
+  transition: width 260ms ease, background 260ms ease;
+}
+
+.base-status.warning {
+  border-bottom-color: var(--amber);
+}
+
+.base-status.warning .base-beacon,
+.base-status.warning .health-fill {
+  background: var(--amber);
+}
+
+.base-status.warning .health-row strong {
+  color: var(--amber);
+}
+
+.base-status.critical,
+.base-status.damaged {
+  border-bottom-color: var(--coral);
+}
+
+.base-status.critical .base-beacon,
+.base-status.critical .health-fill,
+.base-status.damaged .base-beacon {
+  background: var(--coral);
+}
+
+.base-status.critical .health-row strong,
+.base-status.damaged .health-row strong {
+  color: var(--coral);
+}
+
+.base-status.damaged {
+  animation: base-damage 420ms ease-out;
 }
 
 .telemetry-panel {
@@ -860,6 +981,28 @@ button svg {
   }
 }
 
+@keyframes base-damage {
+  0%,
+  45% {
+    background: rgba(126, 18, 13, 0.92);
+    transform: translateX(-50%) translateX(-4px);
+  }
+  22%,
+  68% {
+    transform: translateX(-50%) translateX(4px);
+  }
+  100% {
+    background: var(--surface);
+    transform: translateX(-50%);
+  }
+}
+
+@media (max-width: 1100px) and (min-width: 761px) {
+  .base-status {
+    width: 280px;
+  }
+}
+
 @media (max-width: 760px) {
   :root {
     --panel-width: auto;
@@ -912,6 +1055,35 @@ button svg {
     padding: 10px;
     border-right-width: 1px;
     border-left: 3px solid var(--amber);
+  }
+
+  .base-status {
+    top: 248px;
+    right: 8px;
+    left: 8px;
+    width: auto;
+    padding: 8px 10px 9px;
+    transform: none;
+  }
+
+  .base-heading {
+    gap: 7px;
+  }
+
+  .base-heading strong {
+    font-size: 9px;
+  }
+
+  .base-beacon {
+    height: 20px;
+  }
+
+  .health-row {
+    margin: 5px 0 3px;
+  }
+
+  .base-status.damaged {
+    animation-name: base-damage-mobile;
   }
 
   .control-section + .control-section {
@@ -1107,12 +1279,41 @@ button svg {
     bottom: 68px;
   }
 
+  .base-status {
+    top: 190px;
+  }
+
+  .base-heading span,
+  .base-beacon {
+    display: none;
+  }
+
+  .base-heading strong {
+    margin: 0;
+  }
+
   .telemetry-footer {
     display: none;
   }
 
   .timeline-panel {
     height: 62px;
+  }
+}
+
+@keyframes base-damage-mobile {
+  0%,
+  45% {
+    background: rgba(126, 18, 13, 0.92);
+    transform: translateX(-4px);
+  }
+  22%,
+  68% {
+    transform: translateX(4px);
+  }
+  100% {
+    background: var(--surface);
+    transform: translateX(0);
   }
 }
 
