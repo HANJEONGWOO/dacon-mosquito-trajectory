@@ -120,6 +120,35 @@ weighted ensemble:  R-Hit@1cm=0.6167
 
 ![Pipeline overview](docs/figures/pipeline_overview.png)
 
+## Interactive UAV Visualization
+
+`visualization/`에는 11개 관측 좌표와 `+80ms` 예측 좌표를 실시간으로 재생하는 Three.js 기반 3D 시각화가 포함되어 있습니다. 원래 모기 궤적을 발표용 북한 무인기 추적 시나리오로 재해석한 것으로, 실제 북한 무인기나 군사 센서 데이터가 아닙니다.
+
+![Interactive UAV trajectory visualization](docs/figures/drone_visualization.png)
+
+```bash
+cd ~/git/dacon-mosquito-trajectory/visualization
+npm install
+npm run prepare-data
+npm run dev
+```
+
+브라우저에서 `http://localhost:4173`에 접속하면 다음 기능을 사용할 수 있습니다.
+
+- 11개 관측점을 시간 순서대로 이동하는 3D 드론
+- `submission_best.csv`, `submission_physics.csv`, `submission_ensemble.csv` 예측 비교
+- 샘플 ID 이동, 무작위 선택, 재생/정지, 속도 변경
+- 마우스 드래그/휠 기반 3D 카메라 조작
+- 실제 sensor-local 좌표 텔레메트리와 샘플별 자동 시각 배율
+
+VS Code Remote SSH에서는 `Ports` 패널에서 원격 포트 `4173`을 포워딩한 뒤 표시되는 로컬 주소를 열어야 합니다. 일반 SSH 클라이언트에서는 로컬 PC에서 다음과 같이 터널을 열 수 있습니다.
+
+```bash
+ssh -N -L 4173:127.0.0.1:4173 <SSH_HOST>
+```
+
+`npm run prepare-data`는 `data/open/test`의 10,000개 궤적과 `outputs/`의 세 제출 파일을 `visualization/public/data/trajectories.json`으로 결합합니다. 이 생성 파일은 대회 데이터가 Git에 포함되지 않도록 `.gitignore`에서 제외합니다.
+
 ## Current Result
 
 현재 `--profile strong --gpu` 실행 결과, 최종 제출 파일은 `outputs/submission_best.csv`입니다. 선택된 모델은 `xgboost_scaled`이며, 물리 기반 예측값에 XGBoost 잔차 예측을 scale `0.425`로 반영합니다.

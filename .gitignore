@@ -6,3 +6,6 @@ catboost_info/
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
+visualization/node_modules/
+visualization/dist/
+visualization/public/data/trajectories.json

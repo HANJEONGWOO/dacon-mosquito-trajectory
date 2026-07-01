@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="DACON 모기 궤적 데이터를 북한 무인기 추적 시나리오로 재해석한 3D 예측 시각화"
+    />
+    <title>북한 무인기 항적 예측</title>
+  </head>
+  <body>
+    <main id="app">
+      <div id="scene" aria-label="3차원 드론 궤적"></div>
+
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <div>
+            <h1>북한 무인기 항적 예측</h1>
+            <p>DACON 모기 궤적 데이터 기반 가상 시나리오</p>
+          </div>
+        </div>
+        <div class="top-status">
+          <span class="status-light" aria-hidden="true"></span>
+          <span id="system-status">DATA LINK</span>
+          <span class="top-separator" aria-hidden="true"></span>
+          <span id="sample-count">0 TRACKS</span>
+        </div>
+      </header>
+
+      <aside class="telemetry-panel" aria-label="비행체 텔레메트리">
+        <div class="panel-kicker">TRACK TELEMETRY</div>
+        <div class="track-heading">
+          <strong id="track-id">TEST_00001</strong>
+          <span id="phase-badge">관측</span>
+        </div>
+
+        <dl class="coordinate-list">
+          <div>
+            <dt>X <span>FORWARD</span></dt>
+            <dd id="coord-x">0.000000 <small>m</small></dd>
+          </div>
+          <div>
+            <dt>Y <span>LEFT</span></dt>
+            <dd id="coord-y">0.000000 <small>m</small></dd>
+          </div>
+          <div>
+            <dt>Z <span>UP</span></dt>
+            <dd id="coord-z">0.000000 <small>m</small></dd>
+          </div>
+        </dl>
+
+        <div class="telemetry-footer">
+          <div>
+            <span>TIME</span>
+            <strong id="sim-time">-400 ms</strong>
+          </div>
+          <div>
+            <span>LOCAL MAG</span>
+            <strong id="visual-scale">x1</strong>
+          </div>
+          <div>
+            <span>FORECAST</span>
+            <strong id="forecast-distance">0.00 cm</strong>
+          </div>
+        </div>
+      </aside>
+
+      <section class="control-panel" aria-label="재생 설정">
+        <div class="control-section">
+          <span class="control-label">TRACK ID</span>
+          <div class="sample-control">
+            <button id="previous-sample" class="icon-button" type="button" aria-label="이전 샘플" title="이전 샘플">
+              <i data-lucide="chevron-left"></i>
+            </button>
+            <input id="sample-input" type="text" value="TEST_00001" aria-label="샘플 ID" />
+            <button id="next-sample" class="icon-button" type="button" aria-label="다음 샘플" title="다음 샘플">
+              <i data-lucide="chevron-right"></i>
+            </button>
+            <button id="random-sample" class="icon-button" type="button" aria-label="무작위 샘플" title="무작위 샘플">
+              <i data-lucide="shuffle"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="control-section">
+          <span class="control-label">PREDICTION MODEL</span>
+          <div id="model-control" class="segmented-control">
+            <button type="button" data-method="best" class="active">BEST ML</button>
+            <button type="button" data-method="physics">PHYSICS</button>
+            <button type="button" data-method="ensemble">ENSEMBLE</button>
+          </div>
+        </div>
+
+        <div class="control-row">
+          <div class="control-section compact">
+            <span class="control-label">REPLAY SPEED</span>
+            <div id="speed-control" class="segmented-control speed">
+              <button type="button" data-speed="0.5">0.5x</button>
+              <button type="button" data-speed="1" class="active">1x</button>
+              <button type="button" data-speed="2">2x</button>
+            </div>
+          </div>
+          <div class="control-section compact">
+            <span class="control-label">VIEW</span>
+            <button id="reset-camera" class="command-button" type="button" title="카메라 초기화">
+              <i data-lucide="crosshair"></i>
+              RESET
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <div class="legend" aria-label="궤적 범례">
+        <span><i class="legend-dot observed"></i>관측 궤적</span>
+        <span><i class="legend-line predicted"></i>+80ms 예측</span>
+        <span><i class="legend-ring"></i>예측 위치</span>
+      </div>
+
+      <section class="timeline-panel" aria-label="궤적 재생">
+        <button id="play-toggle" class="play-button" type="button" aria-label="일시정지" title="재생 또는 일시정지">
+          <i data-lucide="pause"></i>
+        </button>
+        <button id="restart" class="icon-button timeline-reset" type="button" aria-label="처음부터 재생" title="처음부터 재생">
+          <i data-lucide="rotate-ccw"></i>
+        </button>
+        <div class="timeline">
+          <div class="timeline-labels" aria-hidden="true">
+            <span>-400ms</span>
+            <span>-200ms</span>
+            <span>0ms</span>
+            <span>+80ms</span>
+          </div>
+          <div class="timeline-track">
+            <div class="observed-zone"></div>
+            <div class="forecast-zone"></div>
+            <div id="timeline-progress" class="timeline-progress"></div>
+            <div id="timeline-cursor" class="timeline-cursor"></div>
+            <i class="zero-marker" aria-hidden="true"></i>
+          </div>
+        </div>
+        <div class="frame-readout">
+          <span>FRAME</span>
+          <strong id="frame-number">01 / 12</strong>
+        </div>
+      </section>
+
+      <div id="loading-state" class="loading-state">
+        <span class="loading-pulse" aria-hidden="true"></span>
+        <strong>TRAJECTORY DATA LOADING</strong>
+      </div>
+
+      <div id="error-state" class="error-state" hidden>
+        <strong>시각화 데이터를 불러오지 못했습니다.</strong>
+        <p><code>npm run prepare-data</code>를 실행한 뒤 다시 시작하세요.</p>
+      </div>
+    </main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

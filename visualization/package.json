@@ -1,0 +1,18 @@
+{
+  "name": "drone-trajectory-visualization",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "prepare-data": "python3 scripts/export_data.py",
+    "dev": "vite --host 127.0.0.1 --port 4173",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1"
+  },
+  "dependencies": {
+    "lucide": "0.263.0",
+    "three": "0.148.0"
+  },
+  "devDependencies": {
+    "vite": "2.9.18"
+  }
+}

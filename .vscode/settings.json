@@ -1,0 +1,8 @@
+{
+  "remote.portsAttributes": {
+    "4173": {
+      "label": "Drone Trajectory Visualization",
+      "onAutoForward": "openBrowser"
+    }
+  }
+}
