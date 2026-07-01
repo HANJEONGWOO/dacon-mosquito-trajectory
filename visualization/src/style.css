@@ -98,6 +98,7 @@ input:focus-visible {
 .top-status,
 .sample-control,
 .control-row,
+.source-row,
 .telemetry-footer,
 .timeline-panel,
 .legend {
@@ -216,6 +217,18 @@ input:focus-visible {
   background: var(--amber);
 }
 
+#phase-badge.hit {
+  color: #102414;
+  background: var(--green);
+  box-shadow: 0 0 12px rgba(120, 219, 141, 0.42);
+}
+
+#phase-badge.miss {
+  color: #2a0704;
+  background: var(--coral);
+  box-shadow: 0 0 12px rgba(255, 121, 107, 0.42);
+}
+
 .coordinate-list {
   margin: 0;
 }
@@ -280,6 +293,21 @@ input:focus-visible {
 
 .control-section + .control-section {
   margin-top: 14px;
+}
+
+.source-row {
+  align-items: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.source-row + .control-section {
+  margin-top: 14px;
+}
+
+.source-row .control-section {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .control-label {
@@ -348,6 +376,10 @@ button svg {
   overflow: hidden;
 }
 
+.segmented-control.dataset {
+  grid-template-columns: repeat(2, 1fr);
+}
+
 .segmented-control button {
   min-width: 0;
   height: 32px;
@@ -379,6 +411,58 @@ button svg {
 .segmented-control.speed button.active {
   color: #2a1d00;
   background: var(--amber);
+}
+
+.auto-control {
+  display: block;
+  flex: 0 0 68px;
+  cursor: pointer;
+}
+
+.auto-control input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.switch-track {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 34px;
+  background: rgba(2, 8, 7, 0.58);
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  transition: background 140ms ease, border-color 140ms ease;
+}
+
+.switch-track i {
+  position: absolute;
+  top: 7px;
+  left: 8px;
+  width: 18px;
+  height: 18px;
+  background: var(--muted);
+  border-radius: 2px;
+  transition: left 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.auto-control input:checked + .switch-track {
+  background: rgba(76, 227, 206, 0.14);
+  border-color: var(--cyan);
+}
+
+.auto-control input:checked + .switch-track i {
+  left: 40px;
+  background: var(--cyan);
+  box-shadow: 0 0 12px rgba(76, 227, 206, 0.52);
+}
+
+.auto-control input:focus-visible + .switch-track {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
 }
 
 .control-row {
@@ -435,6 +519,11 @@ button svg {
   width: 16px;
   height: 0;
   border-top: 2px dashed var(--amber);
+}
+
+.legend-line.actual {
+  border-top-style: solid;
+  border-top-color: var(--coral);
 }
 
 .legend-ring {
@@ -598,6 +687,76 @@ button svg {
   font-size: 12px;
 }
 
+.impact-flash {
+  position: absolute;
+  z-index: 18;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.impact-flash.hit {
+  animation: hit-flash 800ms ease-out both;
+}
+
+.impact-flash.miss {
+  animation: miss-flash 1100ms ease-out both;
+}
+
+.outcome-overlay {
+  position: absolute;
+  z-index: 20;
+  top: 44%;
+  left: 50%;
+  min-width: 260px;
+  padding: 17px 24px 15px;
+  transform: translate(-50%, -50%);
+  background: rgba(4, 13, 11, 0.88);
+  border: 1px solid var(--line-strong);
+  border-left: 5px solid var(--amber);
+  backdrop-filter: blur(9px);
+  pointer-events: none;
+  text-align: center;
+  animation: outcome-pop 260ms ease-out both;
+}
+
+.outcome-overlay.miss {
+  border-left-color: var(--coral);
+}
+
+.outcome-overlay span,
+.outcome-overlay p {
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+}
+
+.outcome-overlay span {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.outcome-overlay strong {
+  display: block;
+  margin: 4px 0 2px;
+  color: var(--amber);
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 38px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.outcome-overlay.miss strong {
+  color: var(--coral);
+}
+
+.outcome-overlay p {
+  margin: 7px 0 0;
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 700;
+}
+
 .loading-state,
 .error-state {
   position: absolute;
@@ -659,6 +818,48 @@ button svg {
   }
 }
 
+@keyframes hit-flash {
+  0% {
+    opacity: 0.95;
+    background: rgba(255, 202, 98, 0.68);
+  }
+  18% {
+    opacity: 0.22;
+    background: rgba(255, 255, 255, 0.36);
+  }
+  100% {
+    opacity: 0;
+    background: rgba(255, 121, 107, 0);
+  }
+}
+
+@keyframes miss-flash {
+  0%,
+  22%,
+  44% {
+    opacity: 0.42;
+    background: rgba(255, 67, 58, 0.34);
+  }
+  12%,
+  34%,
+  58%,
+  100% {
+    opacity: 0;
+    background: rgba(255, 67, 58, 0);
+  }
+}
+
+@keyframes outcome-pop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.86);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
 @media (max-width: 760px) {
   :root {
     --panel-width: auto;
@@ -717,6 +918,14 @@ button svg {
     margin-top: 9px;
   }
 
+  .source-row {
+    margin-top: 9px;
+  }
+
+  .source-row + .control-section {
+    margin-top: 9px;
+  }
+
   .control-label {
     margin-bottom: 4px;
     font-size: 8px;
@@ -727,6 +936,14 @@ button svg {
   .segmented-control button,
   .command-button {
     height: 30px;
+  }
+
+  .switch-track {
+    height: 30px;
+  }
+
+  .switch-track i {
+    top: 6px;
   }
 
   .sample-control .icon-button {
@@ -810,6 +1027,16 @@ button svg {
     display: none;
   }
 
+  .outcome-overlay {
+    top: 49%;
+    min-width: 230px;
+    padding: 14px 18px 13px;
+  }
+
+  .outcome-overlay strong {
+    font-size: 32px;
+  }
+
   .timeline-panel {
     height: 70px;
     gap: 7px;
@@ -852,13 +1079,28 @@ button svg {
 
 @media (max-height: 620px) and (max-width: 760px) {
   .control-panel {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
+    top: 62px;
   }
 
+  .source-row,
+  .source-row + .control-section,
   .control-section + .control-section {
-    margin-top: 0;
+    margin-top: 5px;
+  }
+
+  .control-label {
+    display: none;
+  }
+
+  .sample-control input,
+  .sample-control .icon-button,
+  .segmented-control button,
+  .switch-track {
+    height: 26px;
+  }
+
+  .switch-track i {
+    top: 4px;
   }
 
   .telemetry-panel {

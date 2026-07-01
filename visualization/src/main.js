@@ -16,12 +16,14 @@ const START_TIME = -400;
 const OBSERVED_END = 0;
 const FORECAST_END = 80;
 const BASE_SIMULATION_RATE = 100;
+const HIT_RADIUS_METERS = 0.01;
 const COLORS = {
   background: 0x07110f,
   cyan: 0x4ce3ce,
   cyanDim: 0x237f73,
   amber: 0xffca62,
   coral: 0xff796b,
+  red: 0xff3d32,
   green: 0x78db8d,
   grid: 0x253d36,
   gridCenter: 0x557168,
@@ -51,10 +53,13 @@ const elements = {
   simTime: document.querySelector("#sim-time"),
   visualScale: document.querySelector("#visual-scale"),
   forecastDistance: document.querySelector("#forecast-distance"),
+  distanceLabel: document.querySelector("#distance-label"),
   sampleInput: document.querySelector("#sample-input"),
   previousSample: document.querySelector("#previous-sample"),
   nextSample: document.querySelector("#next-sample"),
   randomSample: document.querySelector("#random-sample"),
+  datasetControl: document.querySelector("#dataset-control"),
+  autoAdvance: document.querySelector("#auto-advance"),
   modelControl: document.querySelector("#model-control"),
   speedControl: document.querySelector("#speed-control"),
   resetCamera: document.querySelector("#reset-camera"),
@@ -63,14 +68,22 @@ const elements = {
   timelineProgress: document.querySelector("#timeline-progress"),
   timelineCursor: document.querySelector("#timeline-cursor"),
   frameNumber: document.querySelector("#frame-number"),
+  actualLegend: document.querySelector("#actual-legend"),
+  impactFlash: document.querySelector("#impact-flash"),
+  outcomeOverlay: document.querySelector("#outcome-overlay"),
+  outcomeKicker: document.querySelector("#outcome-kicker"),
+  outcomeTitle: document.querySelector("#outcome-title"),
+  outcomeDetail: document.querySelector("#outcome-detail"),
 };
 
 const state = {
   data: null,
   samplesById: new Map(),
   sampleIndex: 0,
+  dataset: "validation",
   method: "best",
-  speed: 1,
+  speed: 2,
+  autoAdvance: true,
   playing: true,
   currentTime: START_TIME,
   loopHoldUntil: null,
@@ -78,6 +91,7 @@ const state = {
   center: [0, 0, 0],
   sceneScale: 1,
   floorY: -2,
+  outcome: null,
 };
 
 const renderer = new THREE.WebGLRenderer({
@@ -145,9 +159,15 @@ const targetMarker = createTargetMarker();
 targetMarker.visible = false;
 scene.add(targetMarker);
 
+const effectsGroup = new THREE.Group();
+scene.add(effectsGroup);
+
 let fullObservedLine = null;
 let traversedLine = null;
 let forecastLine = null;
+let actualLine = null;
+let hitRadius = null;
+let errorLine = null;
 let observedMarkers = [];
 
 function createRadarFloor() {
@@ -305,7 +325,7 @@ function createDrone() {
   glow.position.y = -0.12;
   group.add(glow);
   group.scale.setScalar(0.72);
-  return { group, rotorGroups };
+  return { group, rotorGroups, bodyMaterial, rotorMaterial, glow };
 }
 
 function createTargetMarker() {
@@ -365,11 +385,45 @@ function clearTrajectory() {
   observedMarkers = [];
 }
 
+function disposeHierarchy(object) {
+  object.traverse((child) => {
+    child.geometry?.dispose();
+    if (Array.isArray(child.material)) {
+      child.material.forEach((material) => material.dispose());
+    } else {
+      child.material?.dispose();
+    }
+  });
+}
+
+function clearOutcomeEffects() {
+  while (effectsGroup.children.length) {
+    const child = effectsGroup.children.pop();
+    disposeHierarchy(child);
+  }
+  state.outcome = null;
+  elements.outcomeOverlay.hidden = true;
+  elements.outcomeOverlay.classList.remove("hit", "miss");
+  elements.impactFlash.classList.remove("hit", "miss");
+  drone.bodyMaterial.color.setHex(COLORS.amber);
+  drone.bodyMaterial.emissive.setHex(0x3f2c08);
+  drone.bodyMaterial.emissiveIntensity = 0.45;
+  drone.rotorMaterial.color.setHex(COLORS.cyan);
+  drone.rotorMaterial.emissive.setHex(0x123f38);
+  drone.glow.color.setHex(COLORS.amber);
+  drone.glow.intensity = 1.1;
+  drone.group.visible = true;
+  setTargetColor(COLORS.coral);
+}
+
 function calculateViewTransform(sample) {
   const allPoints = [
     ...sample.observed,
     ...Object.values(sample.predictions),
   ];
+  if (sample.actual) {
+    allPoints.push(sample.actual);
+  }
   const mins = [Infinity, Infinity, Infinity];
   const maxs = [-Infinity, -Infinity, -Infinity];
 
@@ -406,17 +460,296 @@ function toWorld(point) {
 }
 
 function activeSample() {
-  return state.data.samples[state.sampleIndex];
+  return activeSamples()[state.sampleIndex];
+}
+
+function activeDataset() {
+  return state.data.datasets[state.dataset];
+}
+
+function activeSamples() {
+  return activeDataset().samples;
 }
 
 function activePrediction() {
   return activeSample().predictions[state.method];
 }
 
+function futureDestination() {
+  return activeSample().actual ?? activePrediction();
+}
+
+function predictionErrorMeters() {
+  const sample = activeSample();
+  if (!sample.actual) {
+    return null;
+  }
+  const prediction = activePrediction();
+  return Math.hypot(
+    prediction[0] - sample.actual[0],
+    prediction[1] - sample.actual[1],
+    prediction[2] - sample.actual[2],
+  );
+}
+
+function setTargetColor(color) {
+  targetMarker.traverse((child) => {
+    if (child.material?.color) {
+      child.material.color.setHex(color);
+    }
+  });
+}
+
+function createHitExplosion(origin) {
+  const group = new THREE.Group();
+  group.position.copy(origin);
+
+  const particleCount = 180;
+  const positions = new Float32Array(particleCount * 3);
+  const velocities = new Float32Array(particleCount * 3);
+  const colors = new Float32Array(particleCount * 3);
+  const palette = [
+    new THREE.Color(COLORS.amber),
+    new THREE.Color(COLORS.coral),
+    new THREE.Color(COLORS.white),
+  ];
+  for (let index = 0; index < particleCount; index += 1) {
+    const direction = new THREE.Vector3(
+      Math.random() - 0.5,
+      Math.random() - 0.28,
+      Math.random() - 0.5,
+    ).normalize();
+    const speed = 1.8 + Math.random() * 4.8;
+    velocities[index * 3] = direction.x * speed;
+    velocities[index * 3 + 1] = direction.y * speed;
+    velocities[index * 3 + 2] = direction.z * speed;
+    const color = palette[index % palette.length];
+    colors[index * 3] = color.r;
+    colors[index * 3 + 1] = color.g;
+    colors[index * 3 + 2] = color.b;
+  }
+
+  const particleGeometry = new THREE.BufferGeometry();
+  particleGeometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  particleGeometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+  const particleMaterial = new THREE.PointsMaterial({
+    size: 0.13,
+    vertexColors: true,
+    transparent: true,
+    opacity: 1,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+  const particles = new THREE.Points(particleGeometry, particleMaterial);
+  group.add(particles);
+
+  const shockwave = new THREE.Mesh(
+    new THREE.RingGeometry(0.42, 0.54, 64),
+    new THREE.MeshBasicMaterial({
+      color: COLORS.amber,
+      transparent: true,
+      opacity: 0.95,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    }),
+  );
+  shockwave.quaternion.copy(camera.quaternion);
+  group.add(shockwave);
+
+  const core = new THREE.Mesh(
+    new THREE.SphereGeometry(0.36, 24, 18),
+    new THREE.MeshBasicMaterial({
+      color: COLORS.white,
+      transparent: true,
+      opacity: 0.9,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    }),
+  );
+  group.add(core);
+
+  const light = new THREE.PointLight(COLORS.amber, 6, 10);
+  group.add(light);
+  effectsGroup.add(group);
+  return { group, particles, velocities, shockwave, core, light };
+}
+
+function createCounterattack(origin) {
+  const group = new THREE.Group();
+  const projectiles = [];
+  const forward = camera.position.clone().sub(origin).normalize();
+  const right = new THREE.Vector3().crossVectors(forward, camera.up).normalize();
+  const up = new THREE.Vector3().crossVectors(right, forward).normalize();
+
+  for (let index = 0; index < 5; index += 1) {
+    const delay = index * 0.13;
+    const spread = (index - 2) * 0.12;
+    const rawEnd = camera.position
+      .clone()
+      .addScaledVector(right, spread)
+      .addScaledVector(up, ((index % 2) - 0.5) * 0.22);
+    const attackVector = rawEnd.clone().sub(origin);
+    const attackDistance = Math.min(attackVector.length() * 0.68, 8);
+    const end = origin
+      .clone()
+      .addScaledVector(
+        attackVector.normalize(),
+        attackDistance,
+      );
+    const projectile = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.025, 0.055, 0.52, 8),
+      new THREE.MeshBasicMaterial({
+        color: index % 2 === 0 ? COLORS.red : COLORS.coral,
+        transparent: true,
+        opacity: 0.95,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      }),
+    );
+    const direction = end.clone().sub(origin).normalize();
+    projectile.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
+    projectile.position.copy(origin);
+
+    const beam = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.015, 0.03, 1, 6),
+      new THREE.MeshBasicMaterial({
+        color: COLORS.red,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      }),
+    );
+    beam.position.copy(origin).add(end).multiplyScalar(0.5);
+    beam.quaternion.copy(projectile.quaternion);
+    beam.scale.y = origin.distanceTo(end);
+    beam.visible = false;
+
+    const trail = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([origin, origin]),
+      new THREE.LineBasicMaterial({
+        color: COLORS.red,
+        transparent: true,
+        opacity: 0.68,
+        blending: THREE.AdditiveBlending,
+      }),
+    );
+    projectile.userData = { start: origin.clone(), end, delay, trail, beam };
+    group.add(projectile, trail, beam);
+    projectiles.push(projectile);
+  }
+
+  const muzzle = new THREE.PointLight(COLORS.red, 5, 8);
+  muzzle.position.copy(origin);
+  group.add(muzzle);
+  effectsGroup.add(group);
+  return { group, projectiles, muzzle };
+}
+
+function showOutcomeOverlay(type, errorMeters) {
+  const hit = type === "hit";
+  elements.outcomeOverlay.hidden = false;
+  elements.outcomeOverlay.classList.toggle("hit", hit);
+  elements.outcomeOverlay.classList.toggle("miss", !hit);
+  elements.outcomeKicker.textContent = hit ? "R-HIT@1CM CONFIRMED" : "R-HIT@1CM FAILED";
+  elements.outcomeTitle.textContent = hit ? "HIT" : "MISS";
+  elements.outcomeDetail.textContent = hit
+    ? `ERROR ${(errorMeters * 100).toFixed(2)} cm · IMPACT`
+    : `ERROR ${(errorMeters * 100).toFixed(2)} cm · COUNTERATTACK`;
+
+  elements.impactFlash.classList.remove("hit", "miss");
+  void elements.impactFlash.offsetWidth;
+  elements.impactFlash.classList.add(type);
+}
+
+function triggerOutcome(now) {
+  const errorMeters = predictionErrorMeters();
+  if (errorMeters === null || state.outcome) {
+    return;
+  }
+
+  const type = errorMeters <= HIT_RADIUS_METERS ? "hit" : "miss";
+  const origin = toWorld(activeSample().actual);
+  const effect = type === "hit" ? createHitExplosion(origin) : createCounterattack(origin);
+  state.outcome = { type, errorMeters, start: now, effect };
+  showOutcomeOverlay(type, errorMeters);
+  setTargetColor(type === "hit" ? COLORS.amber : COLORS.red);
+  errorLine.visible = true;
+  elements.forecastDistance.textContent = `${(errorMeters * 100).toFixed(2)} cm`;
+
+  if (type === "hit") {
+    drone.bodyMaterial.emissive.setHex(COLORS.amber);
+    drone.bodyMaterial.emissiveIntensity = 2;
+  } else {
+    drone.bodyMaterial.color.setHex(COLORS.red);
+    drone.bodyMaterial.emissive.setHex(0x8f0804);
+    drone.bodyMaterial.emissiveIntensity = 1.4;
+    drone.rotorMaterial.color.setHex(COLORS.red);
+    drone.rotorMaterial.emissive.setHex(0x6f0905);
+    drone.glow.color.setHex(COLORS.red);
+    drone.glow.intensity = 4;
+  }
+}
+
+function updateOutcomeEffect(now) {
+  if (!state.outcome) {
+    return;
+  }
+  const elapsed = (now - state.outcome.start) / 1000;
+  const { type, effect } = state.outcome;
+
+  if (type === "hit") {
+    const positions = effect.particles.geometry.attributes.position.array;
+    for (let index = 0; index < positions.length / 3; index += 1) {
+      positions[index * 3] = effect.velocities[index * 3] * elapsed;
+      positions[index * 3 + 1] =
+        effect.velocities[index * 3 + 1] * elapsed - 1.8 * elapsed * elapsed;
+      positions[index * 3 + 2] = effect.velocities[index * 3 + 2] * elapsed;
+    }
+    effect.particles.geometry.attributes.position.needsUpdate = true;
+    effect.particles.material.opacity = Math.max(0, 1 - elapsed / 2.2);
+    const shockScale = 1 + elapsed * 5.5;
+    effect.shockwave.scale.setScalar(shockScale);
+    effect.shockwave.material.opacity = Math.max(0, 0.95 - elapsed / 1.2);
+    effect.core.scale.setScalar(1 + elapsed * 2.2);
+    effect.core.material.opacity = Math.max(0, 0.9 - elapsed * 1.3);
+    effect.light.intensity = Math.max(0, 6 - elapsed * 5);
+    drone.group.visible = elapsed < 0.18;
+  } else {
+    for (const projectile of effect.projectiles) {
+      const localTime = Math.max(0, elapsed - projectile.userData.delay);
+      const progress = THREE.MathUtils.clamp(localTime * 1.25, 0, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      projectile.position.lerpVectors(
+        projectile.userData.start,
+        projectile.userData.end,
+        eased,
+      );
+      projectile.visible = localTime > 0 && progress < 1;
+      projectile.userData.beam.visible = localTime > 0 && localTime < 1.05;
+      projectile.userData.beam.material.opacity =
+        Math.sin(Math.min(progress, 1) * Math.PI) * 0.52;
+      projectile.userData.trail.geometry.dispose();
+      projectile.userData.trail.geometry = new THREE.BufferGeometry().setFromPoints([
+        projectile.userData.start,
+        projectile.position,
+      ]);
+      projectile.userData.trail.material.opacity = Math.max(0, 0.72 - progress * 0.5);
+    }
+    effect.muzzle.intensity = 2.5 + Math.sin(elapsed * 34) * 2.5;
+    drone.group.rotation.y += Math.sin(elapsed * 24) * 0.012;
+  }
+}
+
 function rebuildTrajectory() {
   const sample = activeSample();
   calculateViewTransform(sample);
+  clearOutcomeEffects();
   clearTrajectory();
+  actualLine = null;
+  hitRadius = null;
+  errorLine = null;
 
   const observedWorld = sample.observed.map(toWorld);
   fullObservedLine = makeLine(
@@ -449,6 +782,43 @@ function rebuildTrajectory() {
   forecastLine.computeLineDistances();
   forecastLine.visible = state.currentTime >= OBSERVED_END;
 
+  if (sample.actual) {
+    actualLine = makeLine(
+      [observedWorld.at(-1), observedWorld.at(-1)],
+      new THREE.LineBasicMaterial({
+        color: COLORS.coral,
+        transparent: true,
+        opacity: 0.92,
+      }),
+    );
+    actualLine.visible = state.currentTime >= OBSERVED_END;
+
+    const hitRadiusWorld = Math.max(HIT_RADIUS_METERS * state.sceneScale, 0.08);
+    hitRadius = new THREE.Mesh(
+      new THREE.SphereGeometry(hitRadiusWorld, 20, 14),
+      new THREE.MeshBasicMaterial({
+        color: COLORS.amber,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.17,
+        depthWrite: false,
+      }),
+    );
+    hitRadius.position.copy(toWorld(activePrediction()));
+    hitRadius.visible = state.currentTime >= OBSERVED_END;
+    trajectoryGroup.add(hitRadius);
+
+    errorLine = makeLine(
+      [toWorld(activePrediction()), toWorld(sample.actual)],
+      new THREE.LineBasicMaterial({
+        color: COLORS.red,
+        transparent: true,
+        opacity: 0.94,
+      }),
+    );
+    errorLine.visible = false;
+  }
+
   const markerGeometry = new THREE.SphereGeometry(0.075, 16, 12);
   for (const [index, point] of observedWorld.entries()) {
     const material = new THREE.MeshBasicMaterial({
@@ -465,6 +835,8 @@ function rebuildTrajectory() {
 
   targetMarker.position.copy(toWorld(activePrediction()));
   targetMarker.visible = state.currentTime >= OBSERVED_END;
+  elements.actualLegend.hidden = !sample.actual;
+  updateForecastDistance();
   updateSceneForTime();
 }
 
@@ -476,7 +848,7 @@ function interpolateDataPoint(time) {
   if (time >= OBSERVED_END) {
     const ratio = THREE.MathUtils.clamp(time / FORECAST_END, 0, 1);
     return sample.observed.at(-1).map(
-      (value, axis) => THREE.MathUtils.lerp(value, activePrediction()[axis], ratio),
+      (value, axis) => THREE.MathUtils.lerp(value, futureDestination()[axis], ratio),
     );
   }
 
@@ -545,15 +917,39 @@ function updateSceneForTime() {
   forecastLine.visible = forecasting;
   targetMarker.visible = forecasting;
   targetMarker.position.copy(toWorld(activePrediction()));
+  if (actualLine) {
+    actualLine.visible = forecasting;
+    actualLine.geometry.dispose();
+    actualLine.geometry = new THREE.BufferGeometry().setFromPoints([
+      toWorld(activeSample().observed.at(-1)),
+      currentWorld,
+    ]);
+    hitRadius.visible = forecasting;
+    hitRadius.position.copy(toWorld(activePrediction()));
+  }
 
   updateTelemetry(currentPoint, forecasting);
 }
 
 function updateTelemetry(point, forecasting) {
-  const phase = forecasting ? "예측" : "관측";
+  const phase = state.outcome
+    ? state.outcome.type === "hit"
+      ? "성공"
+      : "실패"
+    : forecasting
+      ? "예측"
+      : "관측";
   elements.phaseBadge.textContent = phase;
   elements.phaseBadge.classList.toggle("forecast", forecasting);
-  elements.systemStatus.textContent = forecasting ? "FORECAST LINK" : "TRACKING LIVE";
+  elements.phaseBadge.classList.toggle("hit", state.outcome?.type === "hit");
+  elements.phaseBadge.classList.toggle("miss", state.outcome?.type === "miss");
+  elements.systemStatus.textContent = state.outcome
+    ? state.outcome.type === "hit"
+      ? "HIT CONFIRMED"
+      : "COUNTERATTACK"
+    : forecasting
+      ? "FORECAST LINK"
+      : "TRACKING LIVE";
   elements.coordX.innerHTML = `${point[0].toFixed(6)} <small>m</small>`;
   elements.coordY.innerHTML = `${point[1].toFixed(6)} <small>m</small>`;
   elements.coordZ.innerHTML = `${point[2].toFixed(6)} <small>m</small>`;
@@ -574,7 +970,7 @@ function updateTelemetry(point, forecasting) {
 }
 
 function setSample(index) {
-  const sampleCount = state.data.samples.length;
+  const sampleCount = activeSamples().length;
   state.sampleIndex = (index + sampleCount) % sampleCount;
   const sample = activeSample();
   elements.trackId.textContent = sample.id;
@@ -592,26 +988,57 @@ function setMethod(method) {
   elements.modelControl.querySelectorAll("button").forEach((button) => {
     button.classList.toggle("active", button.dataset.method === method);
   });
+  restartPlayback();
   rebuildTrajectory();
-  updateForecastDistance();
+}
+
+function setDataset(dataset) {
+  if (!state.data.datasets[dataset]) {
+    return;
+  }
+  state.dataset = dataset;
+  state.samplesById = new Map(
+    activeSamples().map((sample, index) => [sample.id, index]),
+  );
+  elements.datasetControl.querySelectorAll("button").forEach((button) => {
+    button.classList.toggle("active", button.dataset.dataset === dataset);
+  });
+  elements.sampleCount.textContent = `${activeSamples().length.toLocaleString()} TRACKS`;
+  elements.distanceLabel.textContent = activeDataset().hasGroundTruth ? "ERROR" : "FORECAST";
+  setSample(0);
 }
 
 function updateForecastDistance() {
-  const last = activeSample().observed.at(-1);
+  const sample = activeSample();
   const prediction = activePrediction();
-  const distanceMeters = Math.hypot(
+  if (sample.actual) {
+    elements.distanceLabel.textContent = "ERROR";
+    elements.forecastDistance.textContent = state.outcome
+      ? `${(state.outcome.errorMeters * 100).toFixed(2)} cm`
+      : "--";
+    return;
+  }
+
+  const last = sample.observed.at(-1);
+  const displacement = Math.hypot(
     prediction[0] - last[0],
     prediction[1] - last[1],
     prediction[2] - last[2],
   );
-  elements.forecastDistance.textContent = `${(distanceMeters * 100).toFixed(2)} cm`;
+  elements.distanceLabel.textContent = "FORECAST";
+  elements.forecastDistance.textContent = `${(displacement * 100).toFixed(2)} cm`;
 }
 
 function restartPlayback() {
+  clearOutcomeEffects();
   state.currentTime = START_TIME;
   state.playing = true;
   state.loopHoldUntil = null;
   state.lastFrameAt = performance.now();
+  if (errorLine) {
+    errorLine.visible = false;
+  }
+  updateForecastDistance();
   updatePlayButton();
 }
 
@@ -631,7 +1058,8 @@ function resetCamera() {
 function normalizeSampleId(value) {
   const trimmed = value.trim().toUpperCase();
   if (/^\d+$/.test(trimmed)) {
-    return `TEST_${trimmed.padStart(5, "0")}`;
+    const prefix = state.dataset === "validation" ? "TRAIN" : "TEST";
+    return `${prefix}_${trimmed.padStart(5, "0")}`;
   }
   return trimmed;
 }
@@ -650,7 +1078,7 @@ function bindEvents() {
   elements.previousSample.addEventListener("click", () => setSample(state.sampleIndex - 1));
   elements.nextSample.addEventListener("click", () => setSample(state.sampleIndex + 1));
   elements.randomSample.addEventListener("click", () => {
-    setSample(Math.floor(Math.random() * state.data.samples.length));
+    setSample(Math.floor(Math.random() * activeSamples().length));
   });
   elements.sampleInput.addEventListener("change", selectSampleFromInput);
   elements.sampleInput.addEventListener("keydown", (event) => {
@@ -667,6 +1095,17 @@ function bindEvents() {
     }
   });
 
+  elements.datasetControl.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-dataset]");
+    if (button) {
+      setDataset(button.dataset.dataset);
+    }
+  });
+
+  elements.autoAdvance.addEventListener("change", () => {
+    state.autoAdvance = elements.autoAdvance.checked;
+  });
+
   elements.speedControl.addEventListener("click", (event) => {
     const button = event.target.closest("button[data-speed]");
     if (!button) {
@@ -679,11 +1118,12 @@ function bindEvents() {
   });
 
   elements.playToggle.addEventListener("click", () => {
+    if (!state.playing && state.currentTime >= FORECAST_END) {
+      restartPlayback();
+      return;
+    }
     state.playing = !state.playing;
     state.loopHoldUntil = null;
-    if (state.currentTime >= FORECAST_END && state.playing) {
-      state.currentTime = START_TIME;
-    }
     state.lastFrameAt = performance.now();
     updatePlayButton();
   });
@@ -720,25 +1160,35 @@ function animate(now) {
   if (state.data && state.playing) {
     if (state.loopHoldUntil !== null) {
       if (now >= state.loopHoldUntil) {
-        state.currentTime = START_TIME;
-        state.loopHoldUntil = null;
+        if (state.autoAdvance) {
+          setSample(state.sampleIndex + 1);
+        } else {
+          state.playing = false;
+          state.loopHoldUntil = null;
+          updatePlayButton();
+        }
       }
     } else {
       state.currentTime += deltaSeconds * BASE_SIMULATION_RATE * state.speed;
       if (state.currentTime >= FORECAST_END) {
         state.currentTime = FORECAST_END;
-        state.loopHoldUntil = now + 1300;
+        triggerOutcome(now);
+        state.loopHoldUntil = now + (activeSample().actual ? 2600 : 1200);
       }
     }
     updateSceneForTime();
   }
 
+  updateOutcomeEffect(now);
   const elapsed = now * 0.001;
   radarGroup.rotation.y = elapsed * 0.22;
   for (const [index, rotor] of drone.rotorGroups.entries()) {
     rotor.rotation.y = elapsed * (index % 2 === 0 ? 15 : -15);
   }
   targetMarker.quaternion.copy(camera.quaternion);
+  if (state.outcome?.type === "hit") {
+    state.outcome.effect.shockwave.quaternion.copy(camera.quaternion);
+  }
   const markerPulse = 1 + Math.sin(elapsed * 4.5) * 0.07;
   targetMarker.scale.setScalar(markerPulse);
 
@@ -753,20 +1203,27 @@ async function loadData() {
       throw new Error(`HTTP ${response.status}`);
     }
     const data = await response.json();
-    if (!Array.isArray(data.samples) || data.samples.length === 0) {
-      throw new Error("No trajectory samples in data file");
+    if (
+      !data.datasets ||
+      !Array.isArray(data.datasets.validation?.samples) ||
+      data.datasets.validation.samples.length === 0
+    ) {
+      throw new Error("No validation trajectory samples in data file");
     }
 
     state.data = data;
-    state.samplesById = new Map(data.samples.map((sample, index) => [sample.id, index]));
-    elements.sampleCount.textContent = `${data.samples.length.toLocaleString()} TRACKS`;
     elements.loading.hidden = true;
-
-    const hashId = normalizeSampleId(window.location.hash.slice(1));
-    const initialIndex = state.samplesById.get(hashId) ?? 0;
-    setSample(initialIndex);
-    updateForecastDistance();
+    elements.autoAdvance.checked = state.autoAdvance;
     bindEvents();
+
+    const rawHashId = window.location.hash.slice(1).trim().toUpperCase();
+    const initialDataset = rawHashId.startsWith("TEST_") ? "submission" : "validation";
+    setDataset(initialDataset);
+    const hashId = normalizeSampleId(rawHashId);
+    const initialIndex = state.samplesById.get(hashId) ?? 0;
+    if (initialIndex !== 0) {
+      setSample(initialIndex);
+    }
   } catch (error) {
     console.error(error);
     elements.loading.hidden = true;

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "prepare-data": "python3 scripts/export_data.py",
+    "prepare-data": "../.venv/bin/python scripts/export_data.py",
     "dev": "vite --host 127.0.0.1 --port 4173",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1"
