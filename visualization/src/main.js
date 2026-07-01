@@ -44,10 +44,42 @@ const ICONS = {
 };
 
 const HEROES = {
-  junwoo: { name: "이준우", role: "아크 엔지니어", battleCry: "가자!", pitch: 0.82 },
-  chaeeun: { name: "이채은", role: "스텔스 오퍼레이터", battleCry: "준비 완료!", pitch: 1.16 },
-  youngbeom: { name: "차영범", role: "썬더 가디언", battleCry: "받아라!", pitch: 0.72 },
-  jungwoo: { name: "한정우", role: "실드 커맨더", battleCry: "방어 개시!", pitch: 0.88 },
+  junwoo: {
+    name: "이준우",
+    role: "아크 엔지니어",
+    battleCry: "가자!",
+    pitch: 0.82,
+    color: 0x8f292d,
+    accent: 0x4ce3ce,
+    attack: "REPULSOR BURST",
+  },
+  chaeeun: {
+    name: "이채은",
+    role: "스텔스 오퍼레이터",
+    battleCry: "준비 완료!",
+    pitch: 1.16,
+    color: 0x172723,
+    accent: 0xff796b,
+    attack: "WIDOW PULSE",
+  },
+  youngbeom: {
+    name: "차영범",
+    role: "썬더 가디언",
+    battleCry: "받아라!",
+    pitch: 0.72,
+    color: 0x263f6b,
+    accent: 0x8fc7ff,
+    attack: "THUNDER STRIKE",
+  },
+  jungwoo: {
+    name: "한정우",
+    role: "실드 커맨더",
+    battleCry: "방어 개시!",
+    pitch: 0.88,
+    color: 0x28563d,
+    accent: 0x78db8d,
+    attack: "AEGIS CHARGE",
+  },
 };
 
 let selectionAudioContext = null;
@@ -206,6 +238,9 @@ scene.add(effectsGroup);
 const companionGroup = new THREE.Group();
 scene.add(companionGroup);
 
+const heroFlightGroup = new THREE.Group();
+scene.add(heroFlightGroup);
+
 let fullObservedLine = null;
 let traversedLine = null;
 let forecastLine = null;
@@ -214,6 +249,7 @@ let hitRadius = null;
 let errorLine = null;
 let observedMarkers = [];
 let companionTracks = [];
+let heroUnits = [];
 
 function createRadarFloor() {
   const group = new THREE.Group();
@@ -585,6 +621,194 @@ function createFleetDrone(color) {
   return { group, rotorGroups, bodyMaterial, rotorMaterial };
 }
 
+function createHeroUnit(heroId, slot) {
+  const config = HEROES[heroId];
+  const group = new THREE.Group();
+  const model = new THREE.Group();
+  group.add(model);
+
+  const armor = new THREE.MeshStandardMaterial({
+    color: config.color,
+    roughness: 0.42,
+    metalness: 0.62,
+    emissive: config.color,
+    emissiveIntensity: 0.16,
+  });
+  const dark = new THREE.MeshStandardMaterial({
+    color: 0x101916,
+    roughness: 0.58,
+    metalness: 0.48,
+  });
+  const lightArmor = new THREE.MeshStandardMaterial({
+    color: heroId === "jungwoo" ? 0xd7ded7 : 0x596963,
+    roughness: 0.38,
+    metalness: 0.56,
+  });
+  const skin = new THREE.MeshStandardMaterial({
+    color: 0xb8795d,
+    roughness: 0.72,
+  });
+  const energy = new THREE.MeshBasicMaterial({
+    color: config.accent,
+    transparent: true,
+    opacity: 0.94,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+
+  const torsoWidth = heroId === "chaeeun" ? 0.28 : heroId === "youngbeom" ? 0.42 : 0.34;
+  const torso = new THREE.Mesh(
+    new THREE.BoxGeometry(torsoWidth, 0.52, 0.2),
+    armor,
+  );
+  torso.position.y = 0.48;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.14, 16, 12), skin);
+  head.position.y = 0.88;
+  head.scale.z = 0.9;
+  const hips = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.14, 0.18), dark);
+  hips.position.y = 0.16;
+  model.add(torso, head, hips);
+
+  for (const side of [-1, 1]) {
+    const arm = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.055, 0.068, 0.44, 8),
+      side > 0 && heroId === "junwoo" ? armor : dark,
+    );
+    arm.position.set(side * (torsoWidth / 2 + 0.09), 0.49, 0);
+    arm.rotation.z = side * -0.08;
+    const leg = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.062, 0.073, 0.46, 8),
+      armor,
+    );
+    leg.position.set(side * 0.085, -0.11, 0);
+    model.add(arm, leg);
+  }
+
+  const chestCore = new THREE.Mesh(
+    heroId === "junwoo"
+      ? new THREE.CylinderGeometry(0.075, 0.075, 0.025, 6)
+      : new THREE.BoxGeometry(0.12, 0.05, 0.025),
+    energy,
+  );
+  chestCore.position.set(0, 0.53, 0.115);
+  chestCore.rotation.x = Math.PI / 2;
+  model.add(chestCore);
+
+  if (heroId === "chaeeun") {
+    for (const side of [-1, 1]) {
+      const baton = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.018, 0.018, 0.34, 8),
+        energy,
+      );
+      baton.position.set(side * 0.23, 0.34, 0.1);
+      baton.rotation.z = side * 0.24;
+      model.add(baton);
+    }
+  } else if (heroId === "youngbeom") {
+    for (const side of [-1, 1]) {
+      const shoulder = new THREE.Mesh(
+        new THREE.BoxGeometry(0.22, 0.16, 0.26),
+        lightArmor,
+      );
+      shoulder.position.set(side * 0.3, 0.66, 0);
+      model.add(shoulder);
+    }
+    const gauntlet = new THREE.Mesh(new THREE.IcosahedronGeometry(0.13, 1), energy);
+    gauntlet.position.set(0.29, 0.38, 0.08);
+    model.add(gauntlet);
+  } else if (heroId === "jungwoo") {
+    const shield = new THREE.Mesh(
+      new THREE.BoxGeometry(0.08, 0.52, 0.36),
+      lightArmor,
+    );
+    shield.position.set(-0.34, 0.48, 0.08);
+    shield.rotation.z = -0.12;
+    const shieldCore = new THREE.Mesh(
+      new THREE.BoxGeometry(0.09, 0.39, 0.23),
+      energy,
+    );
+    shieldCore.position.set(-0.39, 0.48, 0.08);
+    shieldCore.rotation.z = -0.12;
+    model.add(shield, shieldCore);
+  } else {
+    for (const side of [-1, 1]) {
+      const shoulder = new THREE.Mesh(
+        new THREE.BoxGeometry(0.2, 0.13, 0.24),
+        armor,
+      );
+      shoulder.position.set(side * 0.26, 0.66, 0);
+      model.add(shoulder);
+    }
+  }
+
+  const jets = [];
+  for (const side of [-1, 1]) {
+    const jet = new THREE.Mesh(
+      new THREE.ConeGeometry(0.06, 0.28, 10),
+      energy.clone(),
+    );
+    jet.position.set(side * 0.085, -0.41, 0);
+    jet.rotation.z = Math.PI;
+    jets.push(jet);
+    model.add(jet);
+  }
+
+  const flightRing = new THREE.Mesh(
+    new THREE.TorusGeometry(0.42, 0.014, 6, 36),
+    energy.clone(),
+  );
+  flightRing.rotation.x = Math.PI / 2;
+  flightRing.position.y = -0.42;
+  model.add(flightRing);
+
+  const label = makeTextSprite(config.name, `#${config.accent.toString(16).padStart(6, "0")}`);
+  label.position.set(0, 1.16, 0);
+  label.scale.set(0.72, 0.18, 1);
+  model.add(label);
+
+  model.scale.setScalar(heroId === "youngbeom" ? 0.78 : 0.72);
+  return {
+    id: heroId,
+    slot,
+    group,
+    model,
+    armor,
+    energy,
+    jets,
+    flightRing,
+    attacking: false,
+  };
+}
+
+function clearHeroUnits() {
+  while (heroFlightGroup.children.length) {
+    const child = heroFlightGroup.children.pop();
+    disposeHierarchy(child);
+  }
+  heroUnits = [];
+}
+
+function heroFormationOffset(index, total) {
+  const angle = -Math.PI * 0.9 + (Math.PI * 1.8 * index) / Math.max(total - 1, 1);
+  const radius = total === 1 ? 1.45 : 1.65;
+  return new THREE.Vector3(
+    Math.cos(angle) * radius,
+    0.72 + (index % 2) * 0.34,
+    Math.sin(angle) * radius,
+  );
+}
+
+function rebuildHeroUnits() {
+  clearHeroUnits();
+  state.selectedHeroes.forEach((heroId, index) => {
+    const unit = createHeroUnit(heroId, index);
+    unit.offset = heroFormationOffset(index, state.selectedHeroes.length);
+    unit.group.position.copy(drone.group.position).add(unit.offset);
+    heroUnits.push(unit);
+    heroFlightGroup.add(unit.group);
+  });
+}
+
 function createTargetMarker() {
   const group = new THREE.Group();
   const material = new THREE.MeshBasicMaterial({
@@ -833,7 +1057,7 @@ function clearOutcomeEffects() {
   }
   state.outcome = null;
   elements.outcomeOverlay.hidden = true;
-  elements.outcomeOverlay.classList.remove("hit", "miss");
+  elements.outcomeOverlay.classList.remove("hit", "miss", "hero-save");
   elements.impactFlash.classList.remove("hit", "miss");
   drone.bodyMaterial.color.setHex(COLORS.amber);
   drone.bodyMaterial.emissive.setHex(0x3f2c08);
@@ -847,6 +1071,10 @@ function clearOutcomeEffects() {
   defenseBase.group.position.x = 0;
   defenseBase.group.position.z = 0;
   setBaseAlert(false);
+  heroUnits.forEach((unit) => {
+    unit.attacking = false;
+    unit.group.visible = true;
+  });
 }
 
 function baseTargetWorld() {
@@ -1263,16 +1491,174 @@ function createCounterattack(origin) {
   return { group, projectiles, muzzle, impact, impactRing, impactLight, target };
 }
 
-function showOutcomeOverlay(type, errorMeters) {
+function createHeroInterception(origin, unit) {
+  const config = HEROES[unit.id];
+  const group = new THREE.Group();
+  const start = unit.group.position.clone();
+  const side = unit.slot % 2 === 0 ? -1 : 1;
+  const approach = origin.clone().add(new THREE.Vector3(side * 1.05, 0.52, 0.72));
+  const flightDuration = 0.68;
+  const attackDuration = 0.4;
+
+  const flightTrail = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([start, start]),
+    new THREE.LineBasicMaterial({
+      color: config.accent,
+      transparent: true,
+      opacity: 0.82,
+      blending: THREE.AdditiveBlending,
+    }),
+  );
+  group.add(flightTrail);
+
+  const attack = new THREE.Group();
+  const attackMaterial = new THREE.MeshBasicMaterial({
+    color: config.accent,
+    transparent: true,
+    opacity: 1,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+  if (unit.id === "junwoo") {
+    attack.add(
+      new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 12), attackMaterial),
+      new THREE.Mesh(
+        new THREE.TorusGeometry(0.24, 0.026, 8, 32),
+        attackMaterial.clone(),
+      ),
+    );
+  } else if (unit.id === "chaeeun") {
+    for (const offset of [-0.1, 0.1]) {
+      const pulse = new THREE.Mesh(
+        new THREE.ConeGeometry(0.08, 0.38, 8),
+        attackMaterial.clone(),
+      );
+      pulse.position.x = offset;
+      pulse.rotation.z = Math.PI / 2;
+      attack.add(pulse);
+    }
+  } else if (unit.id === "youngbeom") {
+    attack.add(
+      new THREE.Mesh(new THREE.IcosahedronGeometry(0.23, 1), attackMaterial),
+      new THREE.Mesh(
+        new THREE.TorusGeometry(0.31, 0.03, 8, 36),
+        attackMaterial.clone(),
+      ),
+    );
+  } else {
+    const shieldStrike = new THREE.Mesh(
+      new THREE.BoxGeometry(0.08, 0.48, 0.34),
+      attackMaterial,
+    );
+    shieldStrike.rotation.z = 0.24;
+    attack.add(shieldStrike);
+  }
+  attack.visible = false;
+  group.add(attack);
+
+  const attackBeam = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([approach, approach]),
+    new THREE.LineBasicMaterial({
+      color: config.accent,
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+    }),
+  );
+  group.add(attackBeam);
+
+  const particleCount = 120;
+  const positions = new Float32Array(particleCount * 3);
+  const velocities = new Float32Array(particleCount * 3);
+  for (let index = 0; index < particleCount; index += 1) {
+    const direction = new THREE.Vector3(
+      Math.random() - 0.5,
+      Math.random() - 0.35,
+      Math.random() - 0.5,
+    ).normalize();
+    const speed = 1.6 + Math.random() * 4.2;
+    velocities[index * 3] = direction.x * speed;
+    velocities[index * 3 + 1] = direction.y * speed;
+    velocities[index * 3 + 2] = direction.z * speed;
+  }
+  const particles = new THREE.Points(
+    new THREE.BufferGeometry().setAttribute(
+      "position",
+      new THREE.BufferAttribute(positions, 3),
+    ),
+    new THREE.PointsMaterial({
+      color: config.accent,
+      size: 0.12,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    }),
+  );
+  particles.position.copy(origin);
+  particles.visible = false;
+  group.add(particles);
+
+  const shockwave = new THREE.Mesh(
+    new THREE.RingGeometry(0.2, 0.26, 48),
+    new THREE.MeshBasicMaterial({
+      color: config.accent,
+      transparent: true,
+      opacity: 0,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    }),
+  );
+  shockwave.position.copy(origin);
+  shockwave.quaternion.copy(camera.quaternion);
+  shockwave.visible = false;
+  group.add(shockwave);
+
+  const impactLight = new THREE.PointLight(config.accent, 0, 9);
+  impactLight.position.copy(origin);
+  group.add(impactLight);
+
+  unit.attacking = true;
+  effectsGroup.add(group);
+  return {
+    kind: "hero-intercept",
+    heroId: unit.id,
+    unit,
+    group,
+    start,
+    approach,
+    origin,
+    flightDuration,
+    attackDuration,
+    flightTrail,
+    attack,
+    attackBeam,
+    particles,
+    velocities,
+    shockwave,
+    impactLight,
+    returned: false,
+  };
+}
+
+function showOutcomeOverlay(type, errorMeters, heroId = null) {
   const hit = type === "hit";
+  const hero = heroId ? HEROES[heroId] : null;
   elements.outcomeOverlay.hidden = false;
   elements.outcomeOverlay.classList.toggle("hit", hit);
   elements.outcomeOverlay.classList.toggle("miss", !hit);
-  elements.outcomeKicker.textContent = hit ? "TARGET WITHIN R-HIT@1CM" : "R-HIT@1CM FAILED";
-  elements.outcomeTitle.textContent = hit ? "LOCKED" : "MISS";
+  elements.outcomeKicker.textContent = hit
+    ? "TARGET WITHIN R-HIT@1CM"
+    : hero
+      ? "R-HIT@1CM FAILED · HERO RESPONSE"
+      : "R-HIT@1CM FAILED";
+  elements.outcomeTitle.textContent = hit ? "LOCKED" : hero ? "HERO INTERCEPT" : "MISS";
   elements.outcomeDetail.textContent = hit
     ? `ERROR ${(errorMeters * 100).toFixed(2)} cm · BASE INTERCEPTOR LAUNCHED`
-    : `ERROR ${(errorMeters * 100).toFixed(2)} cm · BASE UNDER ATTACK`;
+    : hero
+      ? `${hero.name} DEPLOYED · ${hero.attack}`
+      : `ERROR ${(errorMeters * 100).toFixed(2)} cm · BASE UNDER ATTACK`;
 
   if (!hit) {
     triggerImpactFlash(type);
@@ -1293,16 +1679,26 @@ function triggerOutcome(now) {
 
   const type = errorMeters <= HIT_RADIUS_METERS ? "hit" : "miss";
   const origin = toWorld(activeSample().actual);
-  const effect = type === "hit" ? createHitExplosion(origin) : createCounterattack(origin);
+  const heroUnit =
+    type === "miss" && heroUnits.length > 0
+      ? heroUnits[Math.floor(Math.random() * heroUnits.length)]
+      : null;
+  const effect =
+    type === "hit"
+      ? createHitExplosion(origin)
+      : heroUnit
+        ? createHeroInterception(origin, heroUnit)
+        : createCounterattack(origin);
   state.outcome = {
     type,
     errorMeters,
     start: now,
     effect,
+    heroId: heroUnit?.id ?? null,
     damageApplied: false,
     impactApplied: false,
   };
-  showOutcomeOverlay(type, errorMeters);
+  showOutcomeOverlay(type, errorMeters, heroUnit?.id);
   setTargetColor(type === "hit" ? COLORS.amber : COLORS.red);
   errorLine.visible = true;
   elements.forecastDistance.textContent = `${(errorMeters * 100).toFixed(2)} cm`;
@@ -1311,6 +1707,12 @@ function triggerOutcome(now) {
     setBaseFiring(true);
     drone.bodyMaterial.emissive.setHex(COLORS.amber);
     drone.bodyMaterial.emissiveIntensity = 2;
+  } else if (heroUnit) {
+    elements.outcomeOverlay.classList.add("hero-save");
+    drone.bodyMaterial.color.setHex(COLORS.red);
+    drone.bodyMaterial.emissive.setHex(0x8f0804);
+    drone.bodyMaterial.emissiveIntensity = 1.5;
+    playSelectionImpact(heroUnit.id);
   } else {
     drone.bodyMaterial.color.setHex(COLORS.red);
     drone.bodyMaterial.emissive.setHex(0x8f0804);
@@ -1319,6 +1721,122 @@ function triggerOutcome(now) {
     drone.rotorMaterial.emissive.setHex(0x6f0905);
     drone.glow.color.setHex(COLORS.red);
     drone.glow.intensity = 4;
+  }
+}
+
+function updateHeroUnits(now) {
+  const elapsed = now * 0.001;
+  const rotationAxis = new THREE.Vector3(0, 1, 0);
+
+  for (const unit of heroUnits) {
+    const pulse = 0.82 + Math.sin(elapsed * 8 + unit.slot) * 0.18;
+    unit.energy.opacity = 0.76 + pulse * 0.2;
+    unit.flightRing.rotation.z = elapsed * (unit.slot % 2 === 0 ? 1.8 : -1.8);
+    for (const [index, jet] of unit.jets.entries()) {
+      jet.scale.y = 0.78 + Math.sin(elapsed * 14 + index + unit.slot) * 0.22;
+    }
+    if (unit.attacking) {
+      continue;
+    }
+
+    const offset = unit.offset.clone().applyAxisAngle(rotationAxis, drone.group.rotation.y * 0.4);
+    const desired = drone.group.position.clone().add(offset);
+    desired.y += Math.sin(elapsed * 3.4 + unit.slot * 1.7) * 0.12;
+    unit.group.position.lerp(desired, 0.1);
+    unit.group.rotation.y = drone.group.rotation.y + Math.PI;
+    unit.model.rotation.z = Math.sin(elapsed * 2.2 + unit.slot) * 0.055;
+    unit.model.rotation.x = -0.1 + Math.sin(elapsed * 2.8 + unit.slot) * 0.025;
+  }
+}
+
+function updateHeroInterception(effect, elapsed) {
+  const hero = HEROES[effect.heroId];
+  const flightProgress = THREE.MathUtils.clamp(elapsed / effect.flightDuration, 0, 1);
+  const easedFlight = 1 - Math.pow(1 - flightProgress, 3);
+  effect.unit.group.position.lerpVectors(effect.start, effect.approach, easedFlight);
+  effect.unit.group.rotation.y = Math.atan2(
+    effect.origin.x - effect.unit.group.position.x,
+    effect.origin.z - effect.unit.group.position.z,
+  );
+  effect.unit.model.rotation.x = -0.28 * Math.sin(flightProgress * Math.PI);
+  effect.flightTrail.geometry.dispose();
+  effect.flightTrail.geometry = new THREE.BufferGeometry().setFromPoints([
+    effect.start,
+    effect.unit.group.position,
+  ]);
+  effect.flightTrail.material.opacity = Math.max(0.18, 0.86 - flightProgress * 0.34);
+
+  const attackElapsed = elapsed - effect.flightDuration;
+  const attackProgress = THREE.MathUtils.clamp(
+    attackElapsed / effect.attackDuration,
+    0,
+    1,
+  );
+  if (attackElapsed >= 0 && !state.outcome.impactApplied) {
+    const easedAttack = 1 - Math.pow(1 - attackProgress, 2);
+    effect.attack.visible = true;
+    effect.attack.position.lerpVectors(effect.approach, effect.origin, easedAttack);
+    effect.attack.rotation.x += 0.18;
+    effect.attack.rotation.z += effect.heroId === "jungwoo" ? 0.08 : 0.22;
+
+    let beamPoints = [effect.approach, effect.attack.position];
+    if (effect.heroId === "youngbeom") {
+      beamPoints = Array.from({ length: 8 }, (_, index) => {
+        const ratio = index / 7;
+        const point = effect.approach.clone().lerp(effect.attack.position, ratio);
+        if (index > 0 && index < 7) {
+          point.x += (Math.random() - 0.5) * 0.16;
+          point.y += (Math.random() - 0.5) * 0.16;
+          point.z += (Math.random() - 0.5) * 0.16;
+        }
+        return point;
+      });
+    }
+    effect.attackBeam.geometry.dispose();
+    effect.attackBeam.geometry = new THREE.BufferGeometry().setFromPoints(beamPoints);
+    effect.attackBeam.material.opacity = Math.sin(attackProgress * Math.PI) * 0.92;
+  }
+
+  if (attackProgress >= 1 && !state.outcome.impactApplied) {
+    state.outcome.impactApplied = true;
+    effect.attack.visible = false;
+    effect.attackBeam.material.opacity = 0;
+    effect.particles.visible = true;
+    effect.shockwave.visible = true;
+    effect.impactLight.intensity = 7;
+    drone.group.visible = false;
+    setBaseAlert(false);
+    triggerImpactFlash("hit");
+    elements.outcomeKicker.textContent = "HERO INTERCEPTION SUCCESS";
+    elements.outcomeTitle.textContent = "DRONE DESTROYED";
+    elements.outcomeDetail.textContent = `${hero.name} · ${hero.attack}`;
+  }
+
+  const impactElapsed = Math.max(
+    0,
+    attackElapsed - effect.attackDuration,
+  );
+  if (state.outcome.impactApplied) {
+    const positions = effect.particles.geometry.attributes.position.array;
+    for (let index = 0; index < positions.length / 3; index += 1) {
+      positions[index * 3] = effect.velocities[index * 3] * impactElapsed;
+      positions[index * 3 + 1] =
+        effect.velocities[index * 3 + 1] * impactElapsed
+        - 1.7 * impactElapsed * impactElapsed;
+      positions[index * 3 + 2] = effect.velocities[index * 3 + 2] * impactElapsed;
+    }
+    effect.particles.geometry.attributes.position.needsUpdate = true;
+    effect.particles.material.opacity = Math.max(0, 1 - impactElapsed / 1.5);
+    effect.shockwave.scale.setScalar(1 + impactElapsed * 5.2);
+    effect.shockwave.material.opacity = Math.max(0, 0.95 - impactElapsed / 0.9);
+    effect.shockwave.quaternion.copy(camera.quaternion);
+    effect.impactLight.intensity = Math.max(0, 7 - impactElapsed * 7);
+  }
+
+  if (state.outcome.impactApplied && impactElapsed > 0.42 && !effect.returned) {
+    effect.returned = true;
+    effect.unit.attacking = false;
+    effect.unit.model.rotation.x = 0;
   }
 }
 
@@ -1382,6 +1900,8 @@ function updateOutcomeEffect(now) {
       effect.light.intensity = Math.max(0, 6 - explosionElapsed * 5);
       drone.group.visible = explosionElapsed < 0.18;
     }
+  } else if (effect.kind === "hero-intercept") {
+    updateHeroInterception(effect, elapsed);
   } else {
     for (const projectile of effect.projectiles) {
       const localTime = Math.max(0, elapsed - projectile.userData.delay);
@@ -1701,7 +2221,11 @@ function updateTelemetry(point, forecasting) {
       ? state.outcome.impactApplied
         ? "성공"
         : "요격"
-      : "실패"
+      : state.outcome.heroId
+        ? state.outcome.impactApplied
+          ? "구원"
+          : "출격"
+        : "실패"
     : forecasting
       ? "예측"
       : "관측";
@@ -1714,7 +2238,11 @@ function updateTelemetry(point, forecasting) {
       ? state.outcome.impactApplied
         ? "HIT CONFIRMED"
         : "INTERCEPTOR LAUNCHED"
-      : "BASE UNDER ATTACK"
+      : state.outcome.heroId
+        ? state.outcome.impactApplied
+          ? "DRONE DESTROYED"
+          : `${HEROES[state.outcome.heroId].name} ENGAGING`
+        : "BASE UNDER ATTACK"
     : forecasting
       ? "FORECAST LINK"
       : "TRACKING LIVE";
@@ -2010,6 +2538,7 @@ function startGame() {
         : `SQUAD · ${selected.length} AGENTS`;
   elements.activeAgent.title =
     selected.length === 0 ? "선택된 요원 없음" : selected.map((hero) => hero.name).join(", ");
+  rebuildHeroUnits();
   restartPlayback();
   window.setTimeout(() => {
     elements.heroSelect.hidden = true;
@@ -2165,6 +2694,7 @@ function animate(now) {
   }
 
   updateOutcomeEffect(now);
+  updateHeroUnits(now);
   const elapsed = now * 0.001;
   radarGroup.rotation.y = elapsed * 0.22;
   for (const [index, rotor] of drone.rotorGroups.entries()) {

@@ -1414,6 +1414,14 @@ button svg {
   color: var(--coral);
 }
 
+.outcome-overlay.hero-save {
+  border-left-color: var(--cyan);
+}
+
+.outcome-overlay.hero-save strong {
+  color: var(--cyan);
+}
+
 .outcome-overlay p {
   margin: 7px 0 0;
   color: var(--text);
