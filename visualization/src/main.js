@@ -43,15 +43,32 @@ const ICONS = {
   Shuffle,
 };
 
+const HEROES = {
+  junwoo: { name: "이준우", role: "아크 엔지니어", battleCry: "가자!", pitch: 0.82 },
+  chaeeun: { name: "이채은", role: "스텔스 오퍼레이터", battleCry: "준비 완료!", pitch: 1.16 },
+  youngbeom: { name: "차영범", role: "썬더 가디언", battleCry: "받아라!", pitch: 0.72 },
+  jungwoo: { name: "한정우", role: "실드 커맨더", battleCry: "방어 개시!", pitch: 0.88 },
+};
+
+let selectionAudioContext = null;
+
 const elements = {
   app: document.querySelector("#app"),
   scene: document.querySelector("#scene"),
   introScreen: document.querySelector("#intro-screen"),
   enterGame: document.querySelector("#enter-game"),
   introStatus: document.querySelector("#intro-status"),
+  heroSelect: document.querySelector("#hero-select"),
+  heroGrid: document.querySelector("#hero-grid"),
+  heroBack: document.querySelector("#hero-back"),
+  confirmHero: document.querySelector("#confirm-hero"),
+  heroSelectionStatus: document.querySelector("#hero-selection-status"),
+  selectAllHeroes: document.querySelector("#select-all-heroes"),
+  clearHeroes: document.querySelector("#clear-heroes"),
   loading: document.querySelector("#loading-state"),
   error: document.querySelector("#error-state"),
   systemStatus: document.querySelector("#system-status"),
+  activeAgent: document.querySelector("#active-agent"),
   sampleCount: document.querySelector("#sample-count"),
   trackId: document.querySelector("#track-id"),
   phaseBadge: document.querySelector("#phase-badge"),
@@ -111,6 +128,7 @@ const state = {
   baseHealth: 100,
   fleetSize: 5,
   started: false,
+  selectedHeroes: [],
 };
 
 const renderer = new THREE.WebGLRenderer({
@@ -1850,23 +1868,174 @@ function selectSampleFromInput() {
   setSample(index);
 }
 
+function showHeroSelect() {
+  if (!state.data || state.started) {
+    return;
+  }
+  elements.introScreen.classList.add("departing");
+  elements.heroSelect.hidden = false;
+  window.requestAnimationFrame(() => {
+    elements.heroSelect.classList.add("active");
+  });
+  window.setTimeout(() => {
+    elements.introScreen.hidden = true;
+  }, 520);
+}
+
+function showIntro() {
+  elements.introScreen.hidden = false;
+  elements.introScreen.classList.remove("departing");
+  elements.heroSelect.classList.add("departing");
+  elements.heroSelect.classList.remove("active");
+  window.setTimeout(() => {
+    elements.heroSelect.hidden = true;
+    elements.heroSelect.classList.remove("departing");
+  }, 420);
+}
+
+function updateHeroSelection() {
+  elements.heroGrid.querySelectorAll(".hero-card").forEach((card) => {
+    const selected = state.selectedHeroes.includes(card.dataset.hero);
+    card.classList.toggle("selected", selected);
+    card.setAttribute("aria-selected", String(selected));
+  });
+
+  const selected = state.selectedHeroes.map((heroId) => HEROES[heroId]);
+  if (selected.length === 0) {
+    elements.heroSelectionStatus.textContent = "선택 없음 · 자동 방어 시스템";
+  } else {
+    elements.heroSelectionStatus.textContent =
+      `${selected.length}명 · ${selected.map((hero) => hero.name).join(", ")}`;
+  }
+}
+
+function playSelectionImpact(heroId, squad = false) {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (AudioContextClass) {
+    selectionAudioContext ??= new AudioContextClass();
+    const context = selectionAudioContext;
+    if (context.state === "suspended") {
+      context.resume();
+    }
+    const now = context.currentTime;
+    const master = context.createGain();
+    master.gain.setValueAtTime(0.0001, now);
+    master.gain.exponentialRampToValueAtTime(0.28, now + 0.015);
+    master.gain.exponentialRampToValueAtTime(0.0001, now + 0.34);
+    master.connect(context.destination);
+
+    const impact = context.createOscillator();
+    impact.type = "sawtooth";
+    impact.frequency.setValueAtTime(squad ? 150 : 190, now);
+    impact.frequency.exponentialRampToValueAtTime(58, now + 0.28);
+    impact.connect(master);
+    impact.start(now);
+    impact.stop(now + 0.35);
+
+    const energyGain = context.createGain();
+    energyGain.gain.setValueAtTime(0.0001, now);
+    energyGain.gain.exponentialRampToValueAtTime(0.08, now + 0.04);
+    energyGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
+    energyGain.connect(context.destination);
+    const energy = context.createOscillator();
+    energy.type = "sine";
+    energy.frequency.setValueAtTime(squad ? 320 : 420, now);
+    energy.frequency.exponentialRampToValueAtTime(squad ? 920 : 760, now + 0.24);
+    energy.connect(energyGain);
+    energy.start(now);
+    energy.stop(now + 0.31);
+  }
+
+  if ("speechSynthesis" in window) {
+    window.speechSynthesis.cancel();
+    const hero = HEROES[heroId];
+    const utterance = new SpeechSynthesisUtterance(
+      squad ? "DX 디펜스, 출격!" : hero.battleCry,
+    );
+    utterance.lang = "ko-KR";
+    utterance.rate = squad ? 1.18 : 1.32;
+    utterance.pitch = squad ? 0.92 : hero.pitch;
+    utterance.volume = 0.9;
+    const koreanVoice = window.speechSynthesis
+      .getVoices()
+      .find((voice) => voice.lang.toLowerCase().startsWith("ko"));
+    if (koreanVoice) {
+      utterance.voice = koreanVoice;
+    }
+    window.setTimeout(() => window.speechSynthesis.speak(utterance), 35);
+  }
+}
+
+function activateHeroCard(heroId) {
+  const card = elements.heroGrid.querySelector(`[data-hero="${heroId}"]`);
+  if (!card) {
+    return;
+  }
+  card.classList.remove("activated");
+  void card.offsetWidth;
+  card.classList.add("activated");
+}
+
+function toggleHero(heroId) {
+  if (!HEROES[heroId]) {
+    return;
+  }
+  const wasSelected = state.selectedHeroes.includes(heroId);
+  if (wasSelected) {
+    state.selectedHeroes = state.selectedHeroes.filter((selected) => selected !== heroId);
+  } else {
+    state.selectedHeroes = [...state.selectedHeroes, heroId];
+  }
+  updateHeroSelection();
+  if (!wasSelected) {
+    activateHeroCard(heroId);
+    playSelectionImpact(heroId);
+  }
+}
+
 function startGame() {
   if (!state.data || state.started) {
     return;
   }
+  const selected = state.selectedHeroes.map((heroId) => HEROES[heroId]);
   state.started = true;
   controls.enabled = true;
   elements.app.classList.add("game-started");
-  elements.introScreen.classList.add("departing");
-  elements.introStatus.textContent = "DEFENSE ONLINE";
+  elements.heroSelect.classList.add("departing");
+  elements.activeAgent.textContent =
+    selected.length === 0
+      ? "AUTO DEFENSE"
+      : selected.length === 1
+        ? `AGENT · ${selected[0].name}`
+        : `SQUAD · ${selected.length} AGENTS`;
+  elements.activeAgent.title =
+    selected.length === 0 ? "선택된 요원 없음" : selected.map((hero) => hero.name).join(", ");
   restartPlayback();
   window.setTimeout(() => {
-    elements.introScreen.hidden = true;
-  }, 650);
+    elements.heroSelect.hidden = true;
+  }, 520);
 }
 
 function bindEvents() {
-  elements.enterGame.addEventListener("click", startGame);
+  elements.enterGame.addEventListener("click", showHeroSelect);
+  elements.heroBack.addEventListener("click", showIntro);
+  elements.confirmHero.addEventListener("click", startGame);
+  elements.selectAllHeroes.addEventListener("click", () => {
+    state.selectedHeroes = Object.keys(HEROES);
+    updateHeroSelection();
+    state.selectedHeroes.forEach(activateHeroCard);
+    playSelectionImpact(state.selectedHeroes[0], true);
+  });
+  elements.clearHeroes.addEventListener("click", () => {
+    state.selectedHeroes = [];
+    updateHeroSelection();
+  });
+  elements.heroGrid.addEventListener("click", (event) => {
+    const card = event.target.closest(".hero-card[data-hero]");
+    if (card) {
+      toggleHero(card.dataset.hero);
+    }
+  });
   elements.previousSample.addEventListener("click", () => setSample(state.sampleIndex - 1));
   elements.nextSample.addEventListener("click", () => setSample(state.sampleIndex + 1));
   elements.randomSample.addEventListener("click", () => {
@@ -1934,12 +2103,18 @@ function bindEvents() {
       return;
     }
     if (!state.started) {
-      if (
+      if (event.key === "Escape" && !elements.heroSelect.hidden) {
+        showIntro();
+      } else if (
         !elements.enterGame.disabled
         && (event.key === "Enter" || event.code === "Space")
       ) {
         event.preventDefault();
-        startGame();
+        if (!elements.heroSelect.hidden) {
+          startGame();
+        } else {
+          showHeroSelect();
+        }
       }
       return;
     }

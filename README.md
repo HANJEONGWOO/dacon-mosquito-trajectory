@@ -126,6 +126,8 @@ weighted ensemble:  R-Hit@1cm=0.6167
 
 ![DX Defense intro](docs/figures/dx_defense_intro.png)
 
+![DX Defense hero selection](docs/figures/dx_defense_hero_select.png)
+
 ![Interactive UAV trajectory visualization](docs/figures/drone_visualization.png)
 
 ```bash
@@ -138,6 +140,8 @@ npm run dev
 브라우저에서 `http://localhost:4173`에 접속하면 다음 기능을 사용할 수 있습니다.
 
 - `DX 디펜스` 작전 인트로에서 시작되는 게임형 시연 흐름
+- 이준우(기술 장갑), 이채은(잠입), 차영범(전격), 한정우(방어 지휘)를 0~4명 자유롭게 편성
+- 영웅 선택 시 전투 초상화 전환, 캐릭터별 한국어 기합과 에너지 충격음 재생
 - 서로 다른 궤적을 동시에 비행하는 다중 3D 드론(1~10대 설정, 기본 5대)
 - `submission_best.csv`, `submission_physics.csv`, `submission_ensemble.csv` 예측 비교
 - 기본 2배속 재생과 비행 편대 크기만큼 다음 Track 묶음 자동 진행

@@ -237,6 +237,312 @@ input:focus-visible {
   transform: translate(-18px, -50%);
 }
 
+.hero-select {
+  position: absolute;
+  z-index: 23;
+  inset: 0;
+  padding: 34px 56px 28px;
+  background: rgba(2, 9, 8, 0.94);
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 420ms ease, visibility 420ms ease;
+}
+
+.hero-select.active {
+  visibility: visible;
+  opacity: 1;
+}
+
+.hero-select.departing {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.hero-select-header {
+  height: 82px;
+  display: grid;
+  grid-template-columns: 180px 1fr 180px;
+  align-items: start;
+  border-bottom: 1px solid var(--line);
+}
+
+.hero-select-header > div {
+  text-align: center;
+}
+
+.hero-select-header span,
+.hero-step,
+.hero-select-footer span {
+  color: var(--muted);
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.hero-select-header h1 {
+  margin: 7px 0 0;
+  font-size: 31px;
+  line-height: 1;
+}
+
+.hero-back {
+  width: max-content;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 12px 0 8px;
+  color: var(--muted);
+  background: rgba(9, 25, 21, 0.8);
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.hero-back:hover {
+  color: var(--cyan);
+  border-color: var(--cyan);
+}
+
+.hero-step {
+  justify-self: end;
+  padding-top: 10px;
+  color: var(--amber);
+}
+
+.hero-grid {
+  position: absolute;
+  top: 136px;
+  right: 56px;
+  bottom: 118px;
+  left: 56px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.hero-card {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  padding: 0;
+  background: #08120f;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 180ms ease, transform 180ms ease, opacity 180ms ease;
+}
+
+.hero-card::after {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 34px;
+  height: 4px;
+  background: var(--line-strong);
+  content: "";
+  transition: width 180ms ease, background 180ms ease;
+}
+
+.hero-card:hover {
+  border-color: rgba(76, 227, 206, 0.72);
+  transform: translateY(-4px);
+}
+
+.hero-card.selected {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 1px rgba(76, 227, 206, 0.28);
+  transform: translateY(-6px);
+}
+
+.hero-card.selected::after {
+  width: 100%;
+  background: var(--cyan);
+}
+
+.hero-grid:has(.hero-card.selected) .hero-card:not(.selected) {
+  opacity: 0.72;
+}
+
+.hero-grid:has(.hero-card.selected) .hero-card:not(.selected):hover {
+  opacity: 1;
+}
+
+.hero-card .hero-portrait {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center 26%;
+  opacity: 1;
+  transition: opacity 220ms ease, transform 420ms ease, filter 220ms ease;
+}
+
+.hero-card .hero-portrait.selected {
+  opacity: 0;
+  transform: scale(1.045);
+}
+
+.hero-card:hover .hero-portrait.idle {
+  transform: scale(1.025);
+}
+
+.hero-card.selected .hero-portrait.idle {
+  opacity: 0;
+}
+
+.hero-card.selected .hero-portrait.selected {
+  opacity: 1;
+  transform: scale(1.025);
+}
+
+.hero-card.activated {
+  animation: hero-card-activate 520ms ease-out both;
+}
+
+.hero-card.activated .hero-portrait.selected {
+  animation: hero-portrait-activate 520ms ease-out both;
+}
+
+.hero-number {
+  position: absolute;
+  top: 17px;
+  left: 17px;
+  padding: 5px 7px;
+  color: var(--amber);
+  background: rgba(2, 10, 8, 0.82);
+  border-left: 2px solid var(--amber);
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.hero-copy {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  min-height: 116px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 18px 18px 17px;
+  background: rgba(3, 12, 10, 0.93);
+  border-top: 1px solid rgba(151, 184, 171, 0.24);
+}
+
+.hero-copy small {
+  overflow: hidden;
+  color: var(--cyan);
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 8px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hero-copy strong {
+  margin-top: 7px;
+  font-size: 23px;
+  line-height: 1;
+}
+
+.hero-copy > span {
+  margin-top: 7px;
+  color: #9eb4ab;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.hero-select-footer {
+  position: absolute;
+  right: 56px;
+  bottom: 27px;
+  left: 56px;
+  height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.hero-select-footer strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.hero-selection-summary {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.hero-selection-summary strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hero-selection-actions {
+  display: flex;
+  gap: 7px;
+  margin: 0 24px;
+}
+
+.hero-selection-actions button {
+  height: 34px;
+  padding: 0 12px;
+  color: var(--muted);
+  background: rgba(9, 25, 21, 0.8);
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.hero-selection-actions button:hover {
+  color: var(--cyan);
+  border-color: var(--cyan);
+}
+
+.confirm-hero {
+  flex: 0 0 auto;
+  min-width: 172px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #03110e;
+  background: var(--cyan);
+  border: 1px solid var(--cyan);
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.confirm-hero:hover {
+  background: var(--amber);
+  border-color: var(--amber);
+}
+
+.confirm-hero:disabled {
+  color: #657a72;
+  background: rgba(14, 34, 29, 0.94);
+  border-color: var(--line-strong);
+  cursor: default;
+}
+
 .topbar,
 .base-status,
 .telemetry-panel,
@@ -1184,6 +1490,29 @@ button svg {
   to {
     opacity: 1;
     transform: translate(0, -50%);
+  }
+}
+
+@keyframes hero-card-activate {
+  0% {
+    box-shadow: 0 0 0 rgba(76, 227, 206, 0);
+  }
+  24% {
+    box-shadow: 0 0 34px rgba(76, 227, 206, 0.78);
+  }
+  100% {
+    box-shadow: 0 0 0 1px rgba(76, 227, 206, 0.28);
+  }
+}
+
+@keyframes hero-portrait-activate {
+  0% {
+    filter: brightness(1.85) saturate(0.7);
+    transform: scale(1.07);
+  }
+  100% {
+    filter: brightness(1) saturate(1);
+    transform: scale(1.025);
   }
 }
 

@@ -34,6 +34,81 @@
         </footer>
       </section>
 
+      <section id="hero-select" class="hero-select" aria-labelledby="hero-select-title" hidden>
+        <header class="hero-select-header">
+          <button id="hero-back" class="hero-back" type="button">
+            <i data-lucide="chevron-left"></i>
+            돌아가기
+          </button>
+          <div>
+            <span>DX DEFENSE · AGENT ASSIGNMENT</span>
+            <h1 id="hero-select-title">영웅을 선택하십시오</h1>
+          </div>
+          <span class="hero-step">02 / 02</span>
+        </header>
+
+        <div id="hero-grid" class="hero-grid" role="listbox" aria-label="영웅 선택" aria-multiselectable="true">
+          <button class="hero-card" type="button" data-hero="junwoo" role="option" aria-selected="false">
+            <img class="hero-portrait idle" src="/assets/heroes/lee-junwoo.webp" alt="" />
+            <img class="hero-portrait selected" src="/assets/heroes/lee-junwoo-selected.webp" alt="" />
+            <span class="hero-number">01</span>
+            <span class="hero-copy">
+              <small>TECH ARMOR · IRON MAN MOTIF</small>
+              <strong>이준우</strong>
+              <span>아크 엔지니어</span>
+            </span>
+          </button>
+
+          <button class="hero-card" type="button" data-hero="chaeeun" role="option" aria-selected="false">
+            <img class="hero-portrait idle" src="/assets/heroes/lee-chaeeun.webp" alt="" />
+            <img class="hero-portrait selected" src="/assets/heroes/lee-chaeeun-selected.webp" alt="" />
+            <span class="hero-number">02</span>
+            <span class="hero-copy">
+              <small>SHADOW OPS · BLACK WIDOW MOTIF</small>
+              <strong>이채은</strong>
+              <span>스텔스 오퍼레이터</span>
+            </span>
+          </button>
+
+          <button class="hero-card" type="button" data-hero="youngbeom" role="option" aria-selected="false">
+            <img class="hero-portrait idle" src="/assets/heroes/cha-youngbeom.webp" alt="" />
+            <img class="hero-portrait selected" src="/assets/heroes/cha-youngbeom-selected.webp" alt="" />
+            <span class="hero-number">03</span>
+            <span class="hero-copy">
+              <small>STORM GUARD · THOR MOTIF</small>
+              <strong>차영범</strong>
+              <span>썬더 가디언</span>
+            </span>
+          </button>
+
+          <button class="hero-card" type="button" data-hero="jungwoo" role="option" aria-selected="false">
+            <img class="hero-portrait idle" src="/assets/heroes/han-jungwoo.webp" alt="" />
+            <img class="hero-portrait selected" src="/assets/heroes/han-jungwoo-selected.webp" alt="" />
+            <span class="hero-number">04</span>
+            <span class="hero-copy">
+              <small>FIELD LEAD · CAPTAIN MOTIF</small>
+              <strong>한정우</strong>
+              <span>실드 커맨더</span>
+            </span>
+          </button>
+        </div>
+
+        <footer class="hero-select-footer">
+          <div class="hero-selection-summary">
+            <span>SELECTED AGENTS</span>
+            <strong id="hero-selection-status">선택 없음 · 자동 방어 시스템</strong>
+          </div>
+          <div class="hero-selection-actions">
+            <button id="select-all-heroes" type="button">전체 선택</button>
+            <button id="clear-heroes" type="button">선택 해제</button>
+          </div>
+          <button id="confirm-hero" class="confirm-hero" type="button">
+            작전 시작
+            <i data-lucide="chevron-right"></i>
+          </button>
+        </footer>
+      </section>
+
       <header class="topbar">
         <div class="brand">
           <span class="brand-mark" aria-hidden="true"></span>
@@ -45,6 +120,8 @@
         <div class="top-status">
           <span class="status-light" aria-hidden="true"></span>
           <span id="system-status">DATA LINK</span>
+          <span class="top-separator" aria-hidden="true"></span>
+          <span id="active-agent">AGENT STANDBY</span>
           <span class="top-separator" aria-hidden="true"></span>
           <span id="sample-count">0 TRACKS</span>
         </div>
