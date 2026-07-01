@@ -7,17 +7,38 @@
       name="description"
       content="DACON 모기 궤적 데이터를 북한 무인기 추적 시나리오로 재해석한 3D 예측 시각화"
     />
-    <title>북한 무인기 항적 예측</title>
+    <title>DX 디펜스 | 무인기 항적 예측</title>
   </head>
   <body>
     <main id="app">
       <div id="scene" aria-label="3차원 드론 궤적"></div>
 
+      <section id="intro-screen" class="intro-screen" aria-labelledby="intro-title">
+        <div class="intro-content">
+          <span class="intro-eyebrow">SUWON DIGITAL CITY · DEFENSE CONTROL</span>
+          <h1 id="intro-title"><span>DX</span> 디펜스</h1>
+          <p>예측 궤적을 분석하고 디지털시티를 방어하십시오.</p>
+          <button id="enter-game" class="enter-game" type="button" disabled>
+            <i data-lucide="play"></i>
+            방어 작전 시작
+          </button>
+          <div class="intro-readiness" aria-live="polite">
+            <span class="intro-status-light" aria-hidden="true"></span>
+            <strong id="intro-status">TRAJECTORY DATA LOADING</strong>
+            <span>DEFENSE BASE · HP 100</span>
+          </div>
+        </div>
+        <footer class="intro-footer">
+          <span>DX TRAJECTORY DEFENSE SIMULATION</span>
+          <span>DACON AI PROJECT · 2026</span>
+        </footer>
+      </section>
+
       <header class="topbar">
         <div class="brand">
           <span class="brand-mark" aria-hidden="true"></span>
           <div>
-            <h1>북한 무인기 항적 예측</h1>
+            <h1>DX 디펜스</h1>
             <p>DACON 모기 궤적 데이터 기반 가상 시나리오</p>
           </div>
         </div>
@@ -137,7 +158,19 @@
               <button type="button" data-speed="2" class="active">2x</button>
             </div>
           </div>
-          <div class="control-section compact">
+          <div class="control-section compact fleet-control">
+            <span class="control-label">DRONES</span>
+            <div class="fleet-stepper">
+              <button id="decrease-fleet" class="icon-button" type="button" aria-label="드론 수 감소" title="드론 수 감소">
+                <i data-lucide="minus"></i>
+              </button>
+              <output id="fleet-size" aria-live="polite">5</output>
+              <button id="increase-fleet" class="icon-button" type="button" aria-label="드론 수 증가" title="드론 수 증가">
+                <i data-lucide="plus"></i>
+              </button>
+            </div>
+          </div>
+          <div class="control-section compact view-control">
             <span class="control-label">VIEW</span>
             <button id="reset-camera" class="command-button" type="button" title="카메라 초기화">
               <i data-lucide="crosshair"></i>

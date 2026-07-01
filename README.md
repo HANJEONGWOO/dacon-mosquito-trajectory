@@ -124,6 +124,8 @@ weighted ensemble:  R-Hit@1cm=0.6167
 
 `visualization/`에는 11개 관측 좌표와 `+80ms` 예측 좌표를 실시간으로 재생하는 Three.js 기반 3D 시각화가 포함되어 있습니다. 원래 모기 궤적을 발표용 북한 무인기 추적 시나리오로 재해석한 것으로, 실제 북한 무인기나 군사 센서 데이터가 아닙니다.
 
+![DX Defense intro](docs/figures/dx_defense_intro.png)
+
 ![Interactive UAV trajectory visualization](docs/figures/drone_visualization.png)
 
 ```bash
@@ -135,9 +137,10 @@ npm run dev
 
 브라우저에서 `http://localhost:4173`에 접속하면 다음 기능을 사용할 수 있습니다.
 
-- 11개 관측점을 시간 순서대로 이동하는 3D 드론
+- `DX 디펜스` 작전 인트로에서 시작되는 게임형 시연 흐름
+- 서로 다른 궤적을 동시에 비행하는 다중 3D 드론(1~10대 설정, 기본 5대)
 - `submission_best.csv`, `submission_physics.csv`, `submission_ensemble.csv` 예측 비교
-- 기본 2배속 재생과 트랙 종료 후 다음 ID 자동 진행
+- 기본 2배속 재생과 비행 편대 크기만큼 다음 Track 묶음 자동 진행
 - 자동 진행 토글, 샘플 ID 이동, 무작위 선택, 재생/정지, 속도 변경
 - 5-fold OOF 검증 데이터의 실제 `R-Hit@1cm` 성공/실패 판정
 - 수원 삼성 디지털시티 DX를 모티브로 한 중앙 3D 기지

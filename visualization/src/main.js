@@ -4,8 +4,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Crosshair,
+  Minus,
   Pause,
   Play,
+  Plus,
   RotateCcw,
   Shuffle,
   createIcons,
@@ -33,14 +35,20 @@ const ICONS = {
   ChevronLeft,
   ChevronRight,
   Crosshair,
+  Minus,
   Pause,
   Play,
+  Plus,
   RotateCcw,
   Shuffle,
 };
 
 const elements = {
+  app: document.querySelector("#app"),
   scene: document.querySelector("#scene"),
+  introScreen: document.querySelector("#intro-screen"),
+  enterGame: document.querySelector("#enter-game"),
+  introStatus: document.querySelector("#intro-status"),
   loading: document.querySelector("#loading-state"),
   error: document.querySelector("#error-state"),
   systemStatus: document.querySelector("#system-status"),
@@ -79,6 +87,9 @@ const elements = {
   healthFill: document.querySelector("#health-fill"),
   healthTrack: document.querySelector(".health-track"),
   resetBaseHealth: document.querySelector("#reset-base-health"),
+  decreaseFleet: document.querySelector("#decrease-fleet"),
+  increaseFleet: document.querySelector("#increase-fleet"),
+  fleetSize: document.querySelector("#fleet-size"),
 };
 
 const state = {
@@ -98,6 +109,8 @@ const state = {
   floorY: -2,
   outcome: null,
   baseHealth: 100,
+  fleetSize: 5,
+  started: false,
 };
 
 const renderer = new THREE.WebGLRenderer({
@@ -132,6 +145,7 @@ controls.minDistance = 5;
 controls.maxDistance = 28;
 controls.maxPolarAngle = Math.PI * 0.86;
 controls.target.set(0, 0, 0);
+controls.enabled = false;
 
 scene.add(new THREE.HemisphereLight(0xbde7dc, 0x1b261f, 1.15));
 const keyLight = new THREE.DirectionalLight(0xffe1a8, 1.35);
@@ -171,6 +185,9 @@ scene.add(targetMarker);
 const effectsGroup = new THREE.Group();
 scene.add(effectsGroup);
 
+const companionGroup = new THREE.Group();
+scene.add(companionGroup);
+
 let fullObservedLine = null;
 let traversedLine = null;
 let forecastLine = null;
@@ -178,6 +195,7 @@ let actualLine = null;
 let hitRadius = null;
 let errorLine = null;
 let observedMarkers = [];
+let companionTracks = [];
 
 function createRadarFloor() {
   const group = new THREE.Group();
@@ -498,6 +516,57 @@ function createDrone() {
   return { group, rotorGroups, bodyMaterial, rotorMaterial, glow };
 }
 
+function createFleetDrone(color) {
+  const group = new THREE.Group();
+  const rotorGroups = [];
+  const bodyMaterial = new THREE.MeshStandardMaterial({
+    color,
+    roughness: 0.46,
+    metalness: 0.42,
+    emissive: 0x103a33,
+    emissiveIntensity: 0.45,
+  });
+  const frameMaterial = new THREE.MeshStandardMaterial({
+    color: 0x24332f,
+    roughness: 0.62,
+    metalness: 0.46,
+  });
+  const rotorMaterial = new THREE.MeshBasicMaterial({ color: COLORS.cyan });
+
+  const body = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.2, 0.26, 0.13, 8),
+    bodyMaterial,
+  );
+  const armX = new THREE.Mesh(new THREE.BoxGeometry(0.86, 0.045, 0.06), frameMaterial);
+  const armZ = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.045, 0.86), frameMaterial);
+  group.add(body, armX, armZ);
+
+  for (const [x, z] of [
+    [-0.42, -0.42],
+    [-0.42, 0.42],
+    [0.42, -0.42],
+    [0.42, 0.42],
+  ]) {
+    const rotorGroup = new THREE.Group();
+    rotorGroup.position.set(x, 0.03, z);
+    const rotor = new THREE.Mesh(
+      new THREE.TorusGeometry(0.16, 0.018, 6, 18),
+      rotorMaterial,
+    );
+    rotor.rotation.x = Math.PI / 2;
+    const blade = new THREE.Mesh(
+      new THREE.BoxGeometry(0.3, 0.012, 0.028),
+      rotorMaterial,
+    );
+    rotorGroup.add(rotor, blade);
+    rotorGroups.push(rotorGroup);
+    group.add(rotorGroup);
+  }
+
+  group.scale.setScalar(0.5);
+  return { group, rotorGroups, bodyMaterial, rotorMaterial };
+}
+
 function createTargetMarker() {
   const group = new THREE.Group();
   const material = new THREE.MeshBasicMaterial({
@@ -553,6 +622,179 @@ function clearTrajectory() {
     }
   }
   observedMarkers = [];
+}
+
+function clearCompanionTracks() {
+  while (companionGroup.children.length) {
+    const child = companionGroup.children.pop();
+    disposeHierarchy(child);
+  }
+  companionTracks = [];
+}
+
+function companionFormationOffset(ordinal, totalCompanions) {
+  const slot = ordinal - 1;
+  const compact = window.innerWidth <= 760;
+  if (compact) {
+    const row = Math.floor(slot / 5);
+    const rowStart = row * 5;
+    const rowCount = Math.min(5, totalCompanions - rowStart);
+    const column = slot - rowStart;
+    const spread = (column - (rowCount - 1) / 2) * 1.05;
+    const depth = 1.75 - row * 1.45;
+    const nearX = 0.67;
+    const nearZ = 0.74;
+    const rightX = nearZ;
+    const rightZ = -nearX;
+    return new THREE.Vector3(
+      nearX * depth + rightX * spread,
+      0.22,
+      nearZ * depth + rightZ * spread,
+    );
+  }
+
+  const ring = Math.floor(slot / 6);
+  const ringStart = ring * 6;
+  const ringCount = Math.min(6, totalCompanions - ringStart);
+  const ringSlot = slot - ringStart;
+  const angle = -Math.PI / 2 + (Math.PI * 2 * ringSlot) / Math.max(ringCount, 1);
+  const radius = 3.4 + ring * 2.1;
+  return new THREE.Vector3(
+    Math.cos(angle) * radius,
+    0.25,
+    Math.sin(angle) * radius,
+  );
+}
+
+function companionToWorld(point, track) {
+  return new THREE.Vector3(
+    (point[0] - track.center[0]) * track.scale + track.offset.x,
+    (point[2] - track.center[2]) * track.scale + track.offset.y,
+    -(point[1] - track.center[1]) * track.scale + track.offset.z,
+  );
+}
+
+function companionLine(group, points, material) {
+  const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), material);
+  group.add(line);
+  return line;
+}
+
+function buildCompanionTracks() {
+  clearCompanionTracks();
+  const samples = activeSamples();
+  const companionCount = Math.min(state.fleetSize - 1, samples.length - 1);
+  const colors = [COLORS.green, COLORS.cyan, 0x8fc7ff, 0xa6ead0, 0xffd58a];
+
+  for (let ordinal = 1; ordinal <= companionCount; ordinal += 1) {
+    const sample = samples[(state.sampleIndex + ordinal) % samples.length];
+    const allPoints = [...sample.observed, ...Object.values(sample.predictions)];
+    if (sample.actual) {
+      allPoints.push(sample.actual);
+    }
+    const mins = [Infinity, Infinity, Infinity];
+    const maxs = [-Infinity, -Infinity, -Infinity];
+    for (const point of allPoints) {
+      for (let axis = 0; axis < 3; axis += 1) {
+        mins[axis] = Math.min(mins[axis], point[axis]);
+        maxs[axis] = Math.max(maxs[axis], point[axis]);
+      }
+    }
+    const center = mins.map((value, axis) => (value + maxs[axis]) / 2);
+    const span = Math.max(
+      maxs[0] - mins[0],
+      maxs[1] - mins[1],
+      maxs[2] - mins[2],
+      0.025,
+    );
+    const track = {
+      sample,
+      ordinal,
+      center,
+      scale: THREE.MathUtils.clamp(
+        (window.innerWidth <= 760 ? 1.45 : 2.2) / span,
+        16,
+        window.innerWidth <= 760 ? 72 : 100,
+      ),
+      offset: companionFormationOffset(ordinal, companionCount),
+      group: new THREE.Group(),
+      outcomeShown: false,
+    };
+    const color = colors[(ordinal - 1) % colors.length];
+    const observedWorld = sample.observed.map((point) => companionToWorld(point, track));
+
+    track.observedLine = companionLine(
+      track.group,
+      observedWorld,
+      new THREE.LineBasicMaterial({
+        color,
+        transparent: true,
+        opacity: 0.52,
+      }),
+    );
+    track.forecastLine = companionLine(
+      track.group,
+      [observedWorld.at(-1), companionToWorld(sample.predictions[state.method], track)],
+      new THREE.LineDashedMaterial({
+        color: COLORS.amber,
+        dashSize: 0.12,
+        gapSize: 0.09,
+        transparent: true,
+        opacity: 0.78,
+      }),
+    );
+    track.forecastLine.computeLineDistances();
+    track.forecastLine.visible = false;
+
+    if (sample.actual) {
+      track.actualLine = companionLine(
+        track.group,
+        [observedWorld.at(-1), observedWorld.at(-1)],
+        new THREE.LineBasicMaterial({
+          color: COLORS.coral,
+          transparent: true,
+          opacity: 0.72,
+        }),
+      );
+      track.actualLine.visible = false;
+    } else {
+      track.actualLine = null;
+    }
+
+    track.drone = createFleetDrone(color);
+    track.group.add(track.drone.group);
+
+    track.targetMarker = createTargetMarker();
+    track.targetMarker.scale.setScalar(0.62);
+    track.targetMarker.visible = false;
+    track.group.add(track.targetMarker);
+
+    companionTracks.push(track);
+    companionGroup.add(track.group);
+  }
+}
+
+function setMarkerColor(marker, color) {
+  marker.traverse((child) => {
+    if (child.material?.color) {
+      child.material.color.setHex(color);
+    }
+  });
+}
+
+function resetCompanionOutcomeStates() {
+  for (const track of companionTracks) {
+    track.outcomeShown = false;
+    track.drone.group.visible = true;
+    track.drone.bodyMaterial.color.setHex(
+      [COLORS.green, COLORS.cyan, 0x8fc7ff, 0xa6ead0, 0xffd58a][
+        (track.ordinal - 1) % 5
+      ],
+    );
+    track.drone.bodyMaterial.emissive.setHex(0x103a33);
+    track.drone.bodyMaterial.emissiveIntensity = 0.45;
+    setMarkerColor(track.targetMarker, COLORS.coral);
+  }
 }
 
 function disposeHierarchy(object) {
@@ -1269,19 +1511,20 @@ function rebuildTrajectory() {
   targetMarker.position.copy(toWorld(activePrediction()));
   targetMarker.visible = state.currentTime >= OBSERVED_END;
   elements.actualLegend.hidden = !sample.actual;
+  buildCompanionTracks();
   updateForecastDistance();
   updateSceneForTime();
 }
 
-function interpolateDataPoint(time) {
-  const sample = activeSample();
+function interpolateSamplePoint(sample, time) {
   if (time <= START_TIME) {
     return [...sample.observed[0]];
   }
   if (time >= OBSERVED_END) {
     const ratio = THREE.MathUtils.clamp(time / FORECAST_END, 0, 1);
+    const destination = sample.actual ?? sample.predictions[state.method];
     return sample.observed.at(-1).map(
-      (value, axis) => THREE.MathUtils.lerp(value, futureDestination()[axis], ratio),
+      (value, axis) => THREE.MathUtils.lerp(value, destination[axis], ratio),
     );
   }
 
@@ -1294,6 +1537,10 @@ function interpolateDataPoint(time) {
   return sample.observed[segment].map(
     (value, axis) => THREE.MathUtils.lerp(value, sample.observed[segment + 1][axis], ratio),
   );
+}
+
+function interpolateDataPoint(time) {
+  return interpolateSamplePoint(activeSample(), time);
 }
 
 function traversedWorldPoints(time, currentPoint) {
@@ -1316,6 +1563,71 @@ function traversedWorldPoints(time, currentPoint) {
     points.push(points[0].clone());
   }
   return points;
+}
+
+function updateCompanionsForTime() {
+  const forecasting = state.currentTime >= OBSERVED_END;
+  const animationTime = performance.now() * 0.001;
+
+  for (const track of companionTracks) {
+    const currentPoint = interpolateSamplePoint(track.sample, state.currentTime);
+    const currentWorld = companionToWorld(currentPoint, track);
+    track.drone.group.position.copy(currentWorld);
+    track.drone.group.position.y +=
+      0.07 + Math.sin(performance.now() * 0.004 + track.ordinal) * 0.035;
+
+    const lookAheadTime = Math.min(state.currentTime + 3, FORECAST_END);
+    const aheadWorld = companionToWorld(
+      interpolateSamplePoint(track.sample, lookAheadTime),
+      track,
+    );
+    const direction = aheadWorld.clone().sub(currentWorld);
+    if (direction.lengthSq() > 0.00001) {
+      track.drone.group.rotation.y = Math.atan2(-direction.z, direction.x);
+    }
+
+    for (const [index, rotor] of track.drone.rotorGroups.entries()) {
+      rotor.rotation.y = animationTime * (index % 2 === 0 ? 15 : -15);
+    }
+
+    const predictionWorld = companionToWorld(
+      track.sample.predictions[state.method],
+      track,
+    );
+    track.forecastLine.visible = forecasting;
+    track.targetMarker.visible = forecasting;
+    track.targetMarker.position.copy(predictionWorld);
+    track.targetMarker.quaternion.copy(camera.quaternion);
+
+    if (track.actualLine) {
+      track.actualLine.visible = forecasting;
+      track.actualLine.geometry.dispose();
+      track.actualLine.geometry = new THREE.BufferGeometry().setFromPoints([
+        companionToWorld(track.sample.observed.at(-1), track),
+        currentWorld,
+      ]);
+    }
+
+    if (
+      state.currentTime >= FORECAST_END
+      && track.sample.actual
+      && !track.outcomeShown
+    ) {
+      track.outcomeShown = true;
+      const prediction = track.sample.predictions[state.method];
+      const error = Math.hypot(
+        prediction[0] - track.sample.actual[0],
+        prediction[1] - track.sample.actual[1],
+        prediction[2] - track.sample.actual[2],
+      );
+      const hit = error <= HIT_RADIUS_METERS;
+      const outcomeColor = hit ? COLORS.green : COLORS.red;
+      setMarkerColor(track.targetMarker, outcomeColor);
+      track.drone.bodyMaterial.color.setHex(outcomeColor);
+      track.drone.bodyMaterial.emissive.setHex(hit ? 0x145f36 : 0x7f0804);
+      track.drone.bodyMaterial.emissiveIntensity = 1.15;
+    }
+  }
 }
 
 function updateSceneForTime() {
@@ -1361,6 +1673,7 @@ function updateSceneForTime() {
     hitRadius.position.copy(toWorld(activePrediction()));
   }
 
+  updateCompanionsForTime();
   updateTelemetry(currentPoint, forecasting);
 }
 
@@ -1429,6 +1742,28 @@ function setMethod(method) {
   rebuildTrajectory();
 }
 
+function updateFleetUi() {
+  elements.fleetSize.textContent = String(state.fleetSize);
+  elements.decreaseFleet.disabled = state.fleetSize <= 1;
+  elements.increaseFleet.disabled = state.fleetSize >= 10;
+  if (state.data) {
+    elements.sampleCount.textContent =
+      `${state.fleetSize} ACTIVE · ${activeSamples().length.toLocaleString()} TRACKS`;
+  }
+}
+
+function setFleetSize(size) {
+  const nextSize = THREE.MathUtils.clamp(Math.round(size), 1, 10);
+  if (nextSize === state.fleetSize) {
+    return;
+  }
+  state.fleetSize = nextSize;
+  updateFleetUi();
+  restartPlayback();
+  rebuildTrajectory();
+  resetCamera();
+}
+
 function setDataset(dataset) {
   if (!state.data.datasets[dataset]) {
     return;
@@ -1440,9 +1775,10 @@ function setDataset(dataset) {
   elements.datasetControl.querySelectorAll("button").forEach((button) => {
     button.classList.toggle("active", button.dataset.dataset === dataset);
   });
-  elements.sampleCount.textContent = `${activeSamples().length.toLocaleString()} TRACKS`;
+  updateFleetUi();
   elements.distanceLabel.textContent = activeDataset().hasGroundTruth ? "ERROR" : "FORECAST";
   setSample(0);
+  resetCamera();
 }
 
 function updateForecastDistance() {
@@ -1468,6 +1804,7 @@ function updateForecastDistance() {
 
 function restartPlayback() {
   clearOutcomeEffects();
+  resetCompanionOutcomeStates();
   state.currentTime = START_TIME;
   state.playing = true;
   state.loopHoldUntil = null;
@@ -1488,6 +1825,8 @@ function updatePlayButton() {
 
 function resetCamera() {
   camera.position.set(10, 7.5, 11);
+  camera.fov = window.innerWidth <= 760 ? 60 : 42;
+  camera.updateProjectionMatrix();
   controls.target.set(0, window.innerWidth <= 760 ? state.floorY + 0.95 : 0, 0);
   controls.update();
 }
@@ -1511,7 +1850,23 @@ function selectSampleFromInput() {
   setSample(index);
 }
 
+function startGame() {
+  if (!state.data || state.started) {
+    return;
+  }
+  state.started = true;
+  controls.enabled = true;
+  elements.app.classList.add("game-started");
+  elements.introScreen.classList.add("departing");
+  elements.introStatus.textContent = "DEFENSE ONLINE";
+  restartPlayback();
+  window.setTimeout(() => {
+    elements.introScreen.hidden = true;
+  }, 650);
+}
+
 function bindEvents() {
+  elements.enterGame.addEventListener("click", startGame);
   elements.previousSample.addEventListener("click", () => setSample(state.sampleIndex - 1));
   elements.nextSample.addEventListener("click", () => setSample(state.sampleIndex + 1));
   elements.randomSample.addEventListener("click", () => {
@@ -1567,9 +1922,25 @@ function bindEvents() {
   elements.restart.addEventListener("click", restartPlayback);
   elements.resetCamera.addEventListener("click", resetCamera);
   elements.resetBaseHealth.addEventListener("click", resetBaseHealth);
+  elements.decreaseFleet.addEventListener("click", () => {
+    setFleetSize(state.fleetSize - 1);
+  });
+  elements.increaseFleet.addEventListener("click", () => {
+    setFleetSize(state.fleetSize + 1);
+  });
 
   window.addEventListener("keydown", (event) => {
     if (event.target instanceof HTMLInputElement) {
+      return;
+    }
+    if (!state.started) {
+      if (
+        !elements.enterGame.disabled
+        && (event.key === "Enter" || event.code === "Space")
+      ) {
+        event.preventDefault();
+        startGame();
+      }
       return;
     }
     if (event.code === "Space") {
@@ -1584,6 +1955,7 @@ function bindEvents() {
 
   window.addEventListener("resize", () => {
     camera.aspect = window.innerWidth / window.innerHeight;
+    camera.fov = window.innerWidth <= 760 ? 60 : 42;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -1595,11 +1967,11 @@ function animate(now) {
   const deltaSeconds = Math.min((now - state.lastFrameAt) / 1000, 0.1);
   state.lastFrameAt = now;
 
-  if (state.data && state.playing) {
+  if (state.data && state.playing && state.started) {
     if (state.loopHoldUntil !== null) {
       if (now >= state.loopHoldUntil) {
         if (state.autoAdvance) {
-          setSample(state.sampleIndex + 1);
+          setSample(state.sampleIndex + state.fleetSize);
         } else {
           state.playing = false;
           state.loopHoldUntil = null;
@@ -1651,6 +2023,9 @@ async function loadData() {
 
     state.data = data;
     elements.loading.hidden = true;
+    elements.enterGame.disabled = false;
+    elements.introScreen.classList.add("ready");
+    elements.introStatus.textContent = "SYSTEM READY";
     elements.autoAdvance.checked = state.autoAdvance;
     bindEvents();
 
