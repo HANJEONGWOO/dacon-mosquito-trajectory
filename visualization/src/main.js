@@ -152,6 +152,9 @@ const elements = {
   victoryDestroyed: document.querySelector("#victory-destroyed"),
   victoryBaseHealth: document.querySelector("#victory-base-health"),
   restartDefense: document.querySelector("#restart-defense"),
+  defeatOutro: document.querySelector("#defeat-outro"),
+  defeatDestroyed: document.querySelector("#defeat-destroyed"),
+  restartAfterDefeat: document.querySelector("#restart-after-defeat"),
 };
 
 const state = {
@@ -177,9 +180,11 @@ const state = {
   destroyedDrones: 0,
   victoryTarget: 50,
   victory: false,
+  defeat: false,
 };
 
 let victoryTimer = null;
+let defeatTimer = null;
 
 const renderer = new THREE.WebGLRenderer({
   antialias: true,
@@ -1166,7 +1171,7 @@ function updateMissionProgress() {
 }
 
 function showVictoryOutro() {
-  if (!state.victory) {
+  if (!state.victory || state.defeat) {
     return;
   }
   state.playing = false;
@@ -1185,12 +1190,42 @@ function showVictoryOutro() {
 }
 
 function scheduleVictory() {
-  if (state.victory || state.destroyedDrones < state.victoryTarget) {
+  if (state.victory || state.defeat || state.destroyedDrones < state.victoryTarget) {
     return;
   }
   state.victory = true;
   window.clearTimeout(victoryTimer);
   victoryTimer = window.setTimeout(showVictoryOutro, 1050);
+}
+
+function showDefeatOutro() {
+  if (!state.defeat) {
+    return;
+  }
+  state.playing = false;
+  state.loopHoldUntil = null;
+  controls.enabled = false;
+  elements.defeatDestroyed.textContent = formatDroneCount(state.destroyedDrones);
+  elements.app.classList.add("defeat-active");
+  elements.defeatOutro.hidden = false;
+  window.requestAnimationFrame(() => {
+    elements.defeatOutro.classList.add("active");
+  });
+  camera.position.set(8.2, 5.3, 9.5);
+  controls.target.set(0, state.floorY + 0.85, 0);
+  controls.update();
+}
+
+function scheduleDefeat() {
+  if (state.defeat || state.baseHealth > 0) {
+    return;
+  }
+  state.defeat = true;
+  state.victory = false;
+  window.clearTimeout(victoryTimer);
+  victoryTimer = null;
+  window.clearTimeout(defeatTimer);
+  defeatTimer = window.setTimeout(showDefeatOutro, 1050);
 }
 
 function recordDroneDestroyed(result = state.outcome) {
@@ -1211,24 +1246,47 @@ function setVictoryTarget(target) {
 
 function restartDefense() {
   window.clearTimeout(victoryTimer);
+  window.clearTimeout(defeatTimer);
   victoryTimer = null;
+  defeatTimer = null;
   state.victory = false;
+  state.defeat = false;
+  state.started = false;
+  state.playing = false;
+  state.loopHoldUntil = null;
+  state.currentTime = START_TIME;
   state.destroyedDrones = 0;
+  state.selectedHeroes = [];
   updateMissionProgress();
+  updateHeroSelection();
   resetBaseHealth();
+  clearOutcomeEffects();
+  resetCompanionOutcomeStates();
+  clearHeroUnits();
+  updateSceneForTime();
+  updatePlayButton();
+  elements.activeAgent.textContent = "AGENT STANDBY";
+  elements.activeAgent.title = "";
   elements.victoryOutro.classList.remove("active");
-  elements.app.classList.remove("victory-active");
-  controls.enabled = true;
+  elements.defeatOutro.classList.remove("active");
+  elements.heroSelect.classList.remove("active", "departing");
+  elements.heroSelect.hidden = true;
+  elements.introScreen.hidden = false;
+  elements.introScreen.classList.remove("departing");
+  elements.introStatus.textContent = "SYSTEM READY";
+  elements.app.classList.remove("game-started", "victory-active", "defeat-active");
+  controls.enabled = false;
   window.setTimeout(() => {
     elements.victoryOutro.hidden = true;
+    elements.defeatOutro.hidden = true;
   }, 420);
   resetCamera();
-  restartPlayback();
 }
 
 function damageBase(amount) {
   state.baseHealth = Math.max(0, state.baseHealth - amount);
   updateBaseHealth();
+  scheduleDefeat();
   elements.baseStatus.classList.remove("damaged");
   void elements.baseStatus.offsetWidth;
   elements.baseStatus.classList.add("damaged");
@@ -2926,6 +2984,7 @@ function bindEvents() {
     setVictoryTarget(state.victoryTarget + 1);
   });
   elements.restartDefense.addEventListener("click", restartDefense);
+  elements.restartAfterDefeat.addEventListener("click", restartDefense);
 
   window.addEventListener("keydown", (event) => {
     if (event.target instanceof HTMLInputElement) {

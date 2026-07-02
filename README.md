@@ -132,6 +132,8 @@ weighted ensemble:  R-Hit@1cm=0.6167
 
 ![DX Defense victory outro](docs/figures/dx_defense_victory.png)
 
+![DX Defense defeat outro](docs/figures/dx_defense_defeat.png)
+
 ```bash
 git clone https://github.com/HANJEONGWOO/dacon-mosquito-trajectory.git
 cd dacon-mosquito-trajectory/visualization
@@ -201,6 +203,8 @@ systemctl --user enable --now dacon-mosquito-trajectory
 - 선택 영웅의 편대 분산 호위와 각 MISS 무인기 대상 무작위 영웅 지원 격추
 - 기본 50대인 승리 목표 설정, 파괴 진행률 HUD와 목표 달성 아웃트로
 - 승리 시 디지털시티·네 영웅·최종 전적과 함께 표시되는 엔딩 메시지
+- 기지 HP 0 패배 조건과 손상된 네 영웅·재도전 메시지가 표시되는 패배 아웃트로
+- 승리·패배 후 `다시 하기` 선택 시 점수·HP·편성을 초기화하고 인트로로 복귀
 - 서로 다른 궤적을 동시에 비행하는 다중 3D 드론(1~10대 설정, 기본 5대)
 - `submission_best.csv`, `submission_physics.csv`, `submission_ensemble.csv` 예측 비교
 - 기본 2배속 재생과 비행 편대 크기만큼 다음 Track 묶음 자동 진행

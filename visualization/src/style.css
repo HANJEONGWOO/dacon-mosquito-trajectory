@@ -1678,6 +1678,201 @@ button svg {
   color: var(--green);
 }
 
+.defeat-outro {
+  position: absolute;
+  z-index: 27;
+  inset: 0;
+  overflow: hidden;
+  background: rgba(10, 3, 3, 0.9);
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 620ms ease, visibility 620ms ease;
+}
+
+.defeat-outro::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 5.5%;
+  width: 1px;
+  background: rgba(255, 61, 50, 0.42);
+  content: "";
+}
+
+.defeat-outro.active {
+  visibility: visible;
+  opacity: 1;
+}
+
+.defeat-copy {
+  position: absolute;
+  z-index: 2;
+  top: 13%;
+  left: 8%;
+  width: 43%;
+}
+
+.defeat-copy > span {
+  color: var(--coral);
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.defeat-copy h1 {
+  margin: 17px 0 24px;
+  color: #e6ddda;
+  font-size: 58px;
+  line-height: 1.08;
+  font-weight: 900;
+}
+
+.defeat-copy > p {
+  margin: 0;
+  color: #bfaeaa;
+  font-size: 17px;
+  line-height: 1.75;
+}
+
+.defeat-copy blockquote {
+  margin: 24px 0 0;
+  padding: 14px 0 14px 18px;
+  color: #8f7e7a;
+  border-left: 3px solid var(--coral);
+  font-size: 13px;
+  line-height: 1.75;
+}
+
+.defeat-summary {
+  display: flex;
+  gap: 44px;
+  margin-top: 28px;
+}
+
+.defeat-summary span,
+.defeat-summary strong {
+  display: block;
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+}
+
+.defeat-summary span {
+  color: #786865;
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.defeat-summary strong {
+  margin-top: 5px;
+  color: var(--coral);
+  font-size: 14px;
+}
+
+.restart-after-defeat {
+  min-width: 180px;
+  height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  margin-top: 28px;
+  color: #f3e8e5;
+  background: rgba(74, 15, 12, 0.9);
+  border: 1px solid var(--coral);
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.restart-after-defeat:hover {
+  color: #180403;
+  background: var(--coral);
+}
+
+.defeat-heroes {
+  position: absolute;
+  z-index: 1;
+  top: 10%;
+  right: 3%;
+  bottom: 62px;
+  left: 48%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 7px;
+  pointer-events: none;
+}
+
+.defeat-heroes figure {
+  position: relative;
+  width: 24%;
+  height: 70%;
+  margin: 0;
+  overflow: hidden;
+  background: #0b0706;
+  border-top: 3px solid rgba(255, 121, 107, 0.72);
+  clip-path: polygon(9% 0, 100% 0, 100% 95%, 91% 100%, 0 100%, 0 5%);
+  box-shadow: 0 0 24px rgba(255, 61, 50, 0.1);
+  animation: defeat-hero-sink 720ms ease-out both;
+}
+
+.defeat-heroes figure:nth-child(2) {
+  height: 78%;
+  animation-delay: 100ms;
+}
+
+.defeat-heroes figure:nth-child(3) {
+  height: 82%;
+  animation-delay: 200ms;
+}
+
+.defeat-heroes figure:nth-child(4) {
+  height: 74%;
+  animation-delay: 300ms;
+}
+
+.defeat-heroes img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center 23%;
+  filter: saturate(0.52) brightness(0.72);
+  opacity: 0.86;
+}
+
+.defeat-heroes figcaption {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 10px 8px;
+  color: #c4b5b1;
+  background: rgba(12, 5, 4, 0.92);
+  font-size: 11px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.defeat-footer {
+  position: absolute;
+  z-index: 3;
+  right: 4%;
+  bottom: 24px;
+  left: 8%;
+  display: flex;
+  justify-content: space-between;
+  padding-top: 11px;
+  color: #695b58;
+  border-top: 1px solid rgba(255, 121, 107, 0.2);
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 8px;
+}
+
+.defeat-footer strong {
+  color: var(--coral);
+}
+
 #app.victory-active .topbar,
 #app.victory-active .base-status,
 #app.victory-active .telemetry-panel,
@@ -1685,6 +1880,18 @@ button svg {
 #app.victory-active .legend,
 #app.victory-active .timeline-panel,
 #app.victory-active .outcome-overlay {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+#app.defeat-active .topbar,
+#app.defeat-active .base-status,
+#app.defeat-active .telemetry-panel,
+#app.defeat-active .control-panel,
+#app.defeat-active .legend,
+#app.defeat-active .timeline-panel,
+#app.defeat-active .outcome-overlay {
   visibility: hidden;
   opacity: 0;
   pointer-events: none;
@@ -1796,6 +2003,17 @@ button svg {
   from {
     opacity: 0;
     transform: translateY(36px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes defeat-hero-sink {
+  from {
+    opacity: 0;
+    transform: translateY(-24px);
   }
   to {
     opacity: 1;
