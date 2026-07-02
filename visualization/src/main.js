@@ -19,6 +19,8 @@ const OBSERVED_END = 0;
 const FORECAST_END = 80;
 const BASE_SIMULATION_RATE = 100;
 const HIT_RADIUS_METERS = 0.01;
+const LEADER_DRONE_DAMAGE = 20;
+const STANDARD_DRONE_DAMAGE = 10;
 const COLORS = {
   background: 0x07110f,
   cyan: 0x4ce3ce,
@@ -1224,8 +1226,8 @@ function restartDefense() {
   restartPlayback();
 }
 
-function damageBase() {
-  state.baseHealth = Math.max(0, state.baseHealth - 1);
+function damageBase(amount) {
+  state.baseHealth = Math.max(0, state.baseHealth - amount);
   updateBaseHealth();
   elements.baseStatus.classList.remove("damaged");
   void elements.baseStatus.offsetWidth;
@@ -1886,7 +1888,7 @@ function updateFleetSupportOutcomes(elapsed) {
       support.impactRing.visible = true;
       support.impactLight.intensity = 4.5;
       if (support.mode === "base-attack") {
-        damageBase();
+        damageBase(STANDARD_DRONE_DAMAGE);
         setBaseAlert(true);
       } else {
         support.track.drone.group.visible = false;
@@ -2218,7 +2220,7 @@ function updateOutcomeEffect(now) {
 
     if (elapsed >= 0.8 && !state.outcome.damageApplied) {
       state.outcome.damageApplied = true;
-      damageBase();
+      damageBase(LEADER_DRONE_DAMAGE);
       setBaseAlert(true);
     }
 
