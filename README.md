@@ -141,6 +141,59 @@ npm run dev
 
 궤적 데이터가 저장소에 포함되어 있으므로 별도 데이터 준비 없이 실행됩니다. 로컬 브라우저에서는 `http://localhost:4173`, 포트포워딩된 PC에서는 `http://공인IP:외부포트`로 접속할 수 있습니다.
 
+### 외부 서비스 실행 및 운영
+
+외부 접속 주소:
+
+```text
+http://hjw.iptime.org:4173
+```
+
+서비스 실행:
+
+```bash
+systemctl --user start dacon-mosquito-trajectory
+```
+
+상태 확인, 재시작 및 중지:
+
+```bash
+systemctl --user status dacon-mosquito-trajectory
+systemctl --user restart dacon-mosquito-trajectory
+systemctl --user stop dacon-mosquito-trajectory
+```
+
+서비스 로그 확인:
+
+```bash
+journalctl --user -u dacon-mosquito-trajectory -f
+```
+
+코드 수정 후에는 정적 파일을 다시 빌드하고 서비스를 재시작합니다.
+
+```bash
+cd ~/git/dacon-mosquito-trajectory/visualization
+npm ci
+npm run build
+systemctl --user restart dacon-mosquito-trajectory
+```
+
+이 서비스는 이미 자동 시작하도록 설정되어 있습니다. 자동 시작을 다시 설정해야 할 경우 다음 명령을 사용합니다.
+
+```bash
+systemctl --user enable --now dacon-mosquito-trajectory
+```
+
+외부 공개 시에는 Vite 개발 서버 대신 빌드된 정적 파일을 systemd 사용자 서비스로 제공합니다. 현재 배포 구성은 WSL의 `0.0.0.0:4173`에서 서비스되며, Windows에서는 같은 포트를 WSL로 전달합니다. ipTIME 공유기 포트포워딩 규칙은 다음과 같습니다.
+
+```text
+규칙 이름: mosquito-trajectory
+프로토콜: TCP
+외부 포트: 4173
+내부 IP: 192.168.0.28
+내부 포트: 4173
+```
+
 - `DX 디펜스` 작전 인트로에서 시작되는 게임형 시연 흐름
 - 이준우(기술 장갑), 이채은(잠입), 차영범(전격), 한정우(방어 지휘)를 0~4명 자유롭게 편성
 - 영웅 선택 시 전투 초상화 전환, 캐릭터별 한국어 기합과 에너지 충격음 재생
