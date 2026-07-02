@@ -346,11 +346,11 @@ function createAxes() {
 
 function makeTextSprite(text, color) {
   const canvas = document.createElement("canvas");
-  canvas.width = 384;
+  canvas.width = text.length > 12 ? 768 : 384;
   canvas.height = 96;
   const context = canvas.getContext("2d");
   context.clearRect(0, 0, canvas.width, canvas.height);
-  context.font = "700 31px monospace";
+  context.font = "700 36px monospace";
   context.textAlign = "center";
   context.textBaseline = "middle";
   context.fillStyle = "rgba(4, 12, 10, 0.8)";
@@ -363,9 +363,15 @@ function makeTextSprite(text, color) {
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.encoding = THREE.sRGBEncoding;
-  const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false });
+  const material = new THREE.SpriteMaterial({
+    map: texture,
+    transparent: true,
+    depthWrite: false,
+    depthTest: false,
+  });
   const sprite = new THREE.Sprite(material);
-  sprite.scale.set(1.8, 0.45, 1);
+  sprite.scale.set(canvas.width > 384 ? 3.6 : 1.8, 0.45, 1);
+  sprite.renderOrder = 10;
   return sprite;
 }
 
@@ -513,8 +519,8 @@ function createDefenseBase() {
   group.add(perimeter);
 
   const label = makeTextSprite("SAMSUNG DIGITAL CITY · DX", "#78db8d");
-  label.position.set(0, 1.43, 0.42);
-  label.scale.set(1.4, 0.35, 1);
+  label.position.set(0, 1.78, 0.42);
+  label.scale.set(3.2, 0.58, 1);
   group.add(label);
 
   group.scale.setScalar(0.82);
@@ -785,8 +791,8 @@ function createHeroUnit(heroId, slot) {
   model.add(flightRing);
 
   const label = makeTextSprite(config.name, `#${config.accent.toString(16).padStart(6, "0")}`);
-  label.position.set(0, 1.16, 0);
-  label.scale.set(0.72, 0.18, 1);
+  label.position.set(0, 1.28, 0);
+  label.scale.set(1.35, 0.34, 1);
   model.add(label);
 
   model.scale.setScalar(heroId === "youngbeom" ? 0.78 : 0.72);

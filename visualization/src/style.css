@@ -5,8 +5,8 @@
   background: #07110f;
   font-synthesis: none;
   --bg: #07110f;
-  --surface: rgba(10, 24, 21, 0.9);
-  --surface-strong: rgba(7, 17, 15, 0.96);
+  --surface: rgba(5, 16, 13, 0.3);
+  --surface-strong: rgba(4, 13, 11, 0.44);
   --line: rgba(151, 184, 171, 0.24);
   --line-strong: rgba(151, 184, 171, 0.42);
   --text: #eef8f4;
@@ -142,8 +142,9 @@ input:focus-visible {
 .intro-content > p {
   margin: 24px 0 34px;
   color: #b8cac3;
-  font-size: 17px;
+  font-size: 23px;
   line-height: 1.6;
+  font-weight: 650;
 }
 
 .enter-game {
@@ -449,14 +450,14 @@ input:focus-visible {
 
 .hero-copy strong {
   margin-top: 7px;
-  font-size: 23px;
+  font-size: 29px;
   line-height: 1;
 }
 
 .hero-copy > span {
   margin-top: 7px;
   color: #9eb4ab;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -592,7 +593,7 @@ input:focus-visible {
   padding: 0 22px;
   background: var(--surface-strong);
   border-bottom: 1px solid var(--line);
-  backdrop-filter: blur(14px);
+  backdrop-filter: blur(2px);
 }
 
 .brand,
@@ -665,7 +666,7 @@ input:focus-visible {
   width: var(--panel-width);
   background: var(--surface);
   border: 1px solid var(--line);
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(1px);
 }
 
 .base-status {
@@ -1438,10 +1439,10 @@ button svg {
   min-width: 260px;
   padding: 17px 24px 15px;
   transform: translate(-50%, -50%);
-  background: rgba(4, 13, 11, 0.88);
+  background: rgba(4, 13, 11, 0.32);
   border: 1px solid var(--line-strong);
   border-left: 5px solid var(--amber);
-  backdrop-filter: blur(9px);
+  backdrop-filter: blur(1px);
   pointer-events: none;
   text-align: center;
   animation: outcome-pop 260ms ease-out both;
@@ -1536,8 +1537,9 @@ button svg {
 .victory-copy > p {
   margin: 0;
   color: #d2e1db;
-  font-size: 17px;
+  font-size: 22px;
   line-height: 1.75;
+  font-weight: 650;
 }
 
 .victory-copy blockquote {
@@ -1545,8 +1547,9 @@ button svg {
   padding: 14px 0 14px 18px;
   color: #9fb7ad;
   border-left: 3px solid var(--cyan);
-  font-size: 13px;
+  font-size: 17px;
   line-height: 1.75;
+  font-weight: 600;
 }
 
 .victory-summary {
@@ -1654,7 +1657,7 @@ button svg {
   padding: 10px 8px;
   color: var(--text);
   background: rgba(3, 12, 10, 0.9);
-  font-size: 11px;
+  font-size: 16px;
   font-weight: 900;
   text-align: center;
 }
@@ -1730,8 +1733,9 @@ button svg {
 .defeat-copy > p {
   margin: 0;
   color: #bfaeaa;
-  font-size: 17px;
+  font-size: 22px;
   line-height: 1.75;
+  font-weight: 650;
 }
 
 .defeat-copy blockquote {
@@ -1739,8 +1743,9 @@ button svg {
   padding: 14px 0 14px 18px;
   color: #8f7e7a;
   border-left: 3px solid var(--coral);
-  font-size: 13px;
+  font-size: 17px;
   line-height: 1.75;
+  font-weight: 600;
 }
 
 .defeat-summary {
@@ -1849,7 +1854,7 @@ button svg {
   padding: 10px 8px;
   color: #c4b5b1;
   background: rgba(12, 5, 4, 0.92);
-  font-size: 11px;
+  font-size: 16px;
   font-weight: 900;
   text-align: center;
 }
