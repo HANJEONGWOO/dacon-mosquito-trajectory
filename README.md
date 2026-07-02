@@ -133,13 +133,13 @@ weighted ensemble:  R-Hit@1cm=0.6167
 ![DX Defense victory outro](docs/figures/dx_defense_victory.png)
 
 ```bash
-cd ~/git/dacon-mosquito-trajectory/visualization
+git clone https://github.com/HANJEONGWOO/dacon-mosquito-trajectory.git
+cd dacon-mosquito-trajectory/visualization
 npm install
-npm run prepare-data
 npm run dev
 ```
 
-브라우저에서 `http://localhost:4173`에 접속하면 다음 기능을 사용할 수 있습니다.
+궤적 데이터가 저장소에 포함되어 있으므로 별도 데이터 준비 없이 실행됩니다. 로컬 브라우저에서는 `http://localhost:4173`, 포트포워딩된 PC에서는 `http://공인IP:외부포트`로 접속할 수 있습니다.
 
 - `DX 디펜스` 작전 인트로에서 시작되는 게임형 시연 흐름
 - 이준우(기술 장갑), 이채은(잠입), 차영범(전격), 한정우(방어 지휘)를 0~4명 자유롭게 편성
@@ -159,15 +159,9 @@ npm run dev
 - 마우스 드래그/휠 기반 3D 카메라 조작
 - 실제 sensor-local 좌표 텔레메트리와 샘플별 자동 시각 배율
 
-VS Code Remote SSH에서는 `Ports` 패널에서 원격 포트 `4173`을 포워딩한 뒤 표시되는 로컬 주소를 열어야 합니다. 일반 SSH 클라이언트에서는 로컬 PC에서 다음과 같이 터널을 열 수 있습니다.
-
-```bash
-ssh -N -L 4173:127.0.0.1:4173 <SSH_HOST>
-```
-
 `VALIDATION` 모드는 학습 궤적, 실제 `+80ms` 정답, OOF 예측을 사용하므로 샘플별 HIT/MISS를 판정할 수 있습니다. `SUBMISSION` 모드는 정답이 공개되지 않은 테스트 데이터이므로 성공/실패를 임의로 표시하지 않습니다.
 
-`npm run prepare-data`는 검증/제출 궤적 각 10,000개와 모델 예측을 `visualization/public/data/trajectories.json`으로 결합합니다. 이 생성 파일은 대회 데이터가 Git에 포함되지 않도록 `.gitignore`에서 제외합니다.
+`visualization/public/data/trajectories.json`에는 시연에 필요한 검증/제출 궤적과 모델 예측이 포함되어 있습니다. 원본 데이터나 예측 결과를 변경한 경우에만 개발 환경에서 `npm run prepare-data`로 다시 생성하면 됩니다.
 
 ## Current Result
 

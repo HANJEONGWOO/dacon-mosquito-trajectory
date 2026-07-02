@@ -1,5 +1,7 @@
 .venv/
 data/
+!visualization/public/data/
+!visualization/public/data/trajectories.json
 models/
 outputs/
 catboost_info/
@@ -8,4 +10,3 @@ __pycache__/
 .ipynb_checkpoints/
 visualization/node_modules/
 visualization/dist/
-visualization/public/data/trajectories.json
