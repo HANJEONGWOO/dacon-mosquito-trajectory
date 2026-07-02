@@ -1,0 +1,15 @@
+[Unit]
+Description=DACON mosquito trajectory visualization
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/git/dacon-mosquito-trajectory/visualization/dist
+ExecStart=/usr/bin/python3 -m http.server 4173 --bind 0.0.0.0 --directory %h/git/dacon-mosquito-trajectory/visualization/dist
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target
