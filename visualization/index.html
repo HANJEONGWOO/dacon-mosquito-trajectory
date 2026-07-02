@@ -14,25 +14,125 @@
       <div id="scene" aria-label="3차원 드론 궤적"></div>
 
       <section id="intro-screen" class="intro-screen" aria-labelledby="intro-title">
+        <div class="intro-letterbox top" aria-hidden="true"></div>
+        <div class="intro-letterbox bottom" aria-hidden="true"></div>
+        <div class="intro-reticle" aria-hidden="true">
+          <span></span>
+          <i></i>
+        </div>
+        <div class="intro-tactical-header" aria-hidden="true">
+          <span><i></i> LIVE DEFENSE FEED</span>
+          <strong>SECTOR DX-01</strong>
+          <span>THREAT LEVEL · HIGH</span>
+        </div>
         <div class="intro-content">
-          <span class="intro-eyebrow">SUWON DIGITAL CITY · DEFENSE CONTROL</span>
+          <span class="intro-eyebrow">TRAJECTORY PREDICTION · ACTIVE DEFENSE</span>
           <h1 id="intro-title"><span>DX</span> 디펜스</h1>
-          <p>예측 궤적을 분석하고 디지털시티를 방어하십시오.</p>
+          <p>80ms 앞을 예측하여 도시에 접근하는 무인기 편대를 요격하십시오.</p>
           <button id="enter-game" class="enter-game" type="button" disabled>
-            <i data-lucide="play"></i>
-            방어 작전 시작
+            <i data-lucide="map-pin"></i>
+            작전 구역 선택
           </button>
           <div class="intro-readiness" aria-live="polite">
             <span class="intro-status-light" aria-hidden="true"></span>
             <strong id="intro-status">TRAJECTORY DATA LOADING</strong>
-            <span>DEFENSE BASE · HP 100</span>
+            <span>5 HOSTILES DETECTED</span>
           </div>
         </div>
+        <aside class="intro-mission-preview" aria-label="작전 프리뷰">
+          <span>MISSION PREVIEW</span>
+          <div>
+            <small>DEFENSE TARGET</small>
+            <strong>DIGITAL CITY · DX</strong>
+          </div>
+          <div>
+            <small>PREDICTION WINDOW</small>
+            <strong>+80 ms</strong>
+          </div>
+          <div>
+            <small>INTERCEPT SYSTEM</small>
+            <strong>ONLINE</strong>
+          </div>
+        </aside>
         <footer class="intro-footer">
-          <span>DX TRAJECTORY DEFENSE SIMULATION</span>
+          <span>LIVE 3D TRAJECTORY · CINEMATIC PREVIEW</span>
           <span>DACON AI PROJECT · 2026</span>
         </footer>
       </section>
+
+      <section id="stage-select" class="stage-select" aria-labelledby="stage-select-title" hidden>
+        <header class="stage-select-header">
+          <button id="stage-back" class="stage-back" type="button">
+            <i data-lucide="chevron-left"></i>
+            돌아가기
+          </button>
+          <div>
+            <span>DX DEFENSE · OPERATION AREA</span>
+            <h1 id="stage-select-title">방어할 스테이지를 선택하십시오</h1>
+          </div>
+          <span class="stage-step">01 / 02</span>
+        </header>
+
+        <div class="stage-grid" role="listbox" aria-label="스테이지 선택">
+          <button class="stage-card available" type="button" data-stage="digital-city" role="option">
+            <img src="/assets/stages/digital-city.webp" alt="드론 공격을 방어하는 수원 삼성 디지털시티" />
+            <span class="stage-index">01</span>
+            <span class="stage-status"><i></i> 작전 가능</span>
+            <span class="stage-copy">
+              <small>SUWON · PRIMARY DEFENSE SECTOR</small>
+              <strong>삼성 디지털시티</strong>
+              <span><i data-lucide="map-pin"></i> 수원 · DX 부문</span>
+            </span>
+          </button>
+
+          <button class="stage-card locked" type="button" data-message="준비중입니다." role="option" aria-haspopup="dialog">
+            <img src="/assets/stages/umyeon-lab.webp" alt="야간의 삼성전자 우면연구소" />
+            <span class="stage-index">02</span>
+            <span class="stage-status"><i data-lucide="lock"></i> LOCKED</span>
+            <span class="stage-copy">
+              <small>SEOUL · RESEARCH SECTOR</small>
+              <strong>삼성전자 우면연구소</strong>
+              <span><i data-lucide="map-pin"></i> 서울 · R&amp;D 캠퍼스</span>
+            </span>
+          </button>
+
+          <button class="stage-card locked" type="button" data-message="준비중입니다." role="option" aria-haspopup="dialog">
+            <img src="/assets/stages/nano-city.webp" alt="드론이 접근하는 삼성전자 나노시티" />
+            <span class="stage-index">03</span>
+            <span class="stage-status"><i data-lucide="lock"></i> LOCKED</span>
+            <span class="stage-copy">
+              <small>SEMICONDUCTOR · NANO SECTOR</small>
+              <strong>삼성전자 나노시티</strong>
+              <span><i data-lucide="map-pin"></i> 반도체 생산 기지</span>
+            </span>
+          </button>
+
+          <button class="stage-card locked rival" type="button" data-message="이직 준비중입니다." role="option" aria-haspopup="dialog">
+            <img src="/assets/stages/sk-hynix.webp" alt="빗속의 SK 하이닉스 반도체 공장" />
+            <span class="stage-index">04</span>
+            <span class="stage-status"><i data-lucide="lock"></i> LOCKED</span>
+            <span class="stage-copy">
+              <small>MEMORY FAB · SPECIAL SECTOR</small>
+              <strong>SK 하이닉스</strong>
+              <span><i data-lucide="map-pin"></i> 메모리 생산 기지</span>
+            </span>
+          </button>
+        </div>
+
+        <footer class="stage-select-footer">
+          <span>작전 가능 구역 <strong>1 / 4</strong></span>
+          <span>스테이지 이미지는 게임 시나리오를 위한 AI 콘셉트 아트입니다.</span>
+        </footer>
+      </section>
+
+      <section id="stage-notice" class="stage-notice" role="alertdialog" aria-modal="true" aria-labelledby="stage-notice-title" hidden>
+        <div class="stage-notice-icon" aria-hidden="true"><i data-lucide="radio-tower"></i></div>
+        <span>SECTOR ACCESS DENIED</span>
+        <strong id="stage-notice-title">준비중입니다.</strong>
+        <p>해당 작전 구역은 아직 개방되지 않았습니다.</p>
+        <button id="close-stage-notice" type="button">확인</button>
+      </section>
+      <div id="stage-notice-backdrop" class="stage-notice-backdrop" hidden></div>
 
       <section id="hero-select" class="hero-select" aria-labelledby="hero-select-title" hidden>
         <header class="hero-select-header">

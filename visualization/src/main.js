@@ -4,10 +4,13 @@ import {
   ChevronLeft,
   ChevronRight,
   Crosshair,
+  Lock,
+  MapPin,
   Minus,
   Pause,
   Play,
   Plus,
+  RadioTower,
   RotateCcw,
   Shuffle,
   createIcons,
@@ -37,10 +40,13 @@ const ICONS = {
   ChevronLeft,
   ChevronRight,
   Crosshair,
+  Lock,
+  MapPin,
   Minus,
   Pause,
   Play,
   Plus,
+  RadioTower,
   RotateCcw,
   Shuffle,
 };
@@ -92,6 +98,13 @@ const elements = {
   introScreen: document.querySelector("#intro-screen"),
   enterGame: document.querySelector("#enter-game"),
   introStatus: document.querySelector("#intro-status"),
+  stageSelect: document.querySelector("#stage-select"),
+  stageBack: document.querySelector("#stage-back"),
+  stageGrid: document.querySelector(".stage-grid"),
+  stageNotice: document.querySelector("#stage-notice"),
+  stageNoticeTitle: document.querySelector("#stage-notice-title"),
+  stageNoticeBackdrop: document.querySelector("#stage-notice-backdrop"),
+  closeStageNotice: document.querySelector("#close-stage-notice"),
   heroSelect: document.querySelector("#hero-select"),
   heroGrid: document.querySelector("#hero-grid"),
   heroBack: document.querySelector("#hero-back"),
@@ -176,6 +189,8 @@ const state = {
   baseHealth: 100,
   fleetSize: 5,
   started: false,
+  preGameScreen: "intro",
+  selectedStage: "digital-city",
   selectedHeroes: [],
   destroyedDrones: 0,
   victoryTarget: 50,
@@ -1258,6 +1273,8 @@ function restartDefense() {
   state.victory = false;
   state.defeat = false;
   state.started = false;
+  state.preGameScreen = "intro";
+  state.selectedStage = "digital-city";
   state.playing = false;
   state.loopHoldUntil = null;
   state.currentTime = START_TIME;
@@ -1277,6 +1294,9 @@ function restartDefense() {
   elements.defeatOutro.classList.remove("active");
   elements.heroSelect.classList.remove("active", "departing");
   elements.heroSelect.hidden = true;
+  elements.stageSelect.classList.remove("active", "departing");
+  elements.stageSelect.hidden = true;
+  closeStageNotice();
   elements.introScreen.hidden = false;
   elements.introScreen.classList.remove("departing");
   elements.introStatus.textContent = "SYSTEM READY";
@@ -2753,29 +2773,112 @@ function selectSampleFromInput() {
   setSample(index);
 }
 
-function showHeroSelect() {
+function showStageSelect() {
   if (!state.data || state.started) {
     return;
   }
-  elements.introScreen.classList.add("departing");
+  state.preGameScreen = "stage";
+  elements.stageSelect.hidden = false;
+  elements.stageSelect.classList.remove("departing");
+  window.requestAnimationFrame(() => {
+    elements.stageSelect.classList.add("active");
+  });
+
+  if (elements.heroSelect.hidden) {
+    elements.introScreen.classList.add("departing");
+    window.setTimeout(() => {
+      elements.introScreen.hidden = true;
+    }, 520);
+  } else {
+    elements.heroSelect.classList.add("departing");
+    elements.heroSelect.classList.remove("active");
+    window.setTimeout(() => {
+      elements.heroSelect.hidden = true;
+      elements.heroSelect.classList.remove("departing");
+    }, 420);
+  }
+}
+
+function showHeroSelect() {
+  if (!state.data || state.started || state.preGameScreen !== "stage") {
+    return;
+  }
+  state.preGameScreen = "hero";
+  elements.stageSelect.classList.add("departing");
+  elements.stageSelect.classList.remove("active");
   elements.heroSelect.hidden = false;
   window.requestAnimationFrame(() => {
     elements.heroSelect.classList.add("active");
   });
   window.setTimeout(() => {
-    elements.introScreen.hidden = true;
-  }, 520);
+    elements.stageSelect.hidden = true;
+    elements.stageSelect.classList.remove("departing");
+  }, 420);
 }
 
 function showIntro() {
+  state.preGameScreen = "intro";
+  state.currentTime = START_TIME;
+  state.lastFrameAt = performance.now();
   elements.introScreen.hidden = false;
   elements.introScreen.classList.remove("departing");
-  elements.heroSelect.classList.add("departing");
-  elements.heroSelect.classList.remove("active");
+  elements.stageSelect.classList.add("departing");
+  elements.stageSelect.classList.remove("active");
   window.setTimeout(() => {
-    elements.heroSelect.hidden = true;
-    elements.heroSelect.classList.remove("departing");
+    elements.stageSelect.hidden = true;
+    elements.stageSelect.classList.remove("departing");
   }, 420);
+}
+
+function showStageNotice(message) {
+  elements.stageNoticeTitle.textContent = message;
+  elements.stageNotice.querySelector("p").textContent =
+    message === "이직 준비중입니다."
+      ? "해당 작전 구역은 특별한 준비가 더 필요합니다."
+      : "해당 작전 구역은 아직 개방되지 않았습니다.";
+  elements.stageNotice.hidden = false;
+  elements.stageNoticeBackdrop.hidden = false;
+  elements.closeStageNotice.focus();
+}
+
+function closeStageNotice() {
+  elements.stageNotice.hidden = true;
+  elements.stageNoticeBackdrop.hidden = true;
+}
+
+function selectStage(card) {
+  if (card.dataset.message) {
+    showStageNotice(card.dataset.message);
+    return;
+  }
+  state.selectedStage = card.dataset.stage;
+  showHeroSelect();
+}
+
+function returnToStageSelect() {
+  if (state.started) {
+    return;
+  }
+  showStageSelect();
+}
+
+function updateIntroPreview(now, deltaSeconds) {
+  state.currentTime += deltaSeconds * 72;
+  if (state.currentTime >= 34) {
+    state.currentTime = START_TIME;
+  }
+  updateSceneForTime();
+
+  const orbit = now * 0.000095 - 0.8;
+  const radius = 10.8;
+  camera.fov = 39;
+  camera.position.set(
+    Math.cos(orbit) * radius,
+    state.floorY + 5.7 + Math.sin(now * 0.00031) * 0.3,
+    Math.sin(orbit) * radius,
+  );
+  camera.updateProjectionMatrix();
+  controls.target.set(0, state.floorY + 0.95, 0);
 }
 
 function updateHeroSelection() {
@@ -2879,11 +2982,12 @@ function toggleHero(heroId) {
 }
 
 function startGame() {
-  if (!state.data || state.started) {
+  if (!state.data || state.started || state.preGameScreen !== "hero") {
     return;
   }
   const selected = state.selectedHeroes.map((heroId) => HEROES[heroId]);
   state.started = true;
+  state.preGameScreen = "game";
   controls.enabled = true;
   elements.app.classList.add("game-started");
   elements.heroSelect.classList.add("departing");
@@ -2903,8 +3007,17 @@ function startGame() {
 }
 
 function bindEvents() {
-  elements.enterGame.addEventListener("click", showHeroSelect);
-  elements.heroBack.addEventListener("click", showIntro);
+  elements.enterGame.addEventListener("click", showStageSelect);
+  elements.stageBack.addEventListener("click", showIntro);
+  elements.heroBack.addEventListener("click", returnToStageSelect);
+  elements.stageGrid.addEventListener("click", (event) => {
+    const card = event.target.closest(".stage-card");
+    if (card) {
+      selectStage(card);
+    }
+  });
+  elements.closeStageNotice.addEventListener("click", closeStageNotice);
+  elements.stageNoticeBackdrop.addEventListener("click", closeStageNotice);
   elements.confirmHero.addEventListener("click", startGame);
   elements.selectAllHeroes.addEventListener("click", () => {
     state.selectedHeroes = Object.keys(HEROES);
@@ -2997,17 +3110,25 @@ function bindEvents() {
       return;
     }
     if (!state.started) {
-      if (event.key === "Escape" && !elements.heroSelect.hidden) {
+      if (event.key === "Escape" && !elements.stageNotice.hidden) {
+        closeStageNotice();
+      } else if (event.key === "Escape" && state.preGameScreen === "hero") {
+        returnToStageSelect();
+      } else if (event.key === "Escape" && state.preGameScreen === "stage") {
         showIntro();
       } else if (
         !elements.enterGame.disabled
         && (event.key === "Enter" || event.code === "Space")
       ) {
         event.preventDefault();
-        if (!elements.heroSelect.hidden) {
+        if (!elements.stageNotice.hidden) {
+          closeStageNotice();
+        } else if (state.preGameScreen === "hero") {
           startGame();
-        } else {
+        } else if (state.preGameScreen === "stage") {
           showHeroSelect();
+        } else {
+          showStageSelect();
         }
       }
       return;
@@ -3036,7 +3157,9 @@ function animate(now) {
   const deltaSeconds = Math.min((now - state.lastFrameAt) / 1000, 0.1);
   state.lastFrameAt = now;
 
-  if (state.data && state.playing && state.started) {
+  if (state.data && !state.started && state.preGameScreen === "intro") {
+    updateIntroPreview(now, deltaSeconds);
+  } else if (state.data && state.playing && state.started) {
     if (state.loopHoldUntil !== null) {
       if (now >= state.loopHoldUntil) {
         if (state.autoAdvance) {
