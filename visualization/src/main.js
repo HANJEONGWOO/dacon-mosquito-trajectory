@@ -173,7 +173,7 @@ const state = {
   started: false,
   selectedHeroes: [],
   destroyedDrones: 0,
-  victoryTarget: 10,
+  victoryTarget: 50,
   victory: false,
 };
 
@@ -1160,7 +1160,7 @@ function updateMissionProgress() {
   elements.missionTrack.setAttribute("aria-valuemax", String(state.victoryTarget));
   elements.missionTrack.setAttribute("aria-valuenow", String(state.destroyedDrones));
   elements.decreaseVictoryTarget.disabled = state.victoryTarget <= 1;
-  elements.increaseVictoryTarget.disabled = state.victoryTarget >= 50;
+  elements.increaseVictoryTarget.disabled = state.victoryTarget >= 250;
 }
 
 function showVictoryOutro() {
@@ -1191,20 +1191,18 @@ function scheduleVictory() {
   victoryTimer = window.setTimeout(showVictoryOutro, 1050);
 }
 
-function recordDroneDestroyed() {
-  if (state.outcome?.destroyedRecorded) {
+function recordDroneDestroyed(result = state.outcome) {
+  if (!result || result.destroyedRecorded) {
     return;
   }
-  if (state.outcome) {
-    state.outcome.destroyedRecorded = true;
-  }
+  result.destroyedRecorded = true;
   state.destroyedDrones += 1;
   updateMissionProgress();
   scheduleVictory();
 }
 
 function setVictoryTarget(target) {
-  state.victoryTarget = THREE.MathUtils.clamp(Math.round(target), 1, 50);
+  state.victoryTarget = THREE.MathUtils.clamp(Math.round(target), 1, 250);
   updateMissionProgress();
   scheduleVictory();
 }
@@ -1737,6 +1735,192 @@ function createHeroInterception(origin, unit) {
   };
 }
 
+function createSupportProjectile(mode, heroId, color) {
+  const material = new THREE.MeshBasicMaterial({
+    color,
+    transparent: true,
+    opacity: 0.96,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+  if (mode === "hero-support" && heroId === "chaeeun") {
+    const group = new THREE.Group();
+    for (const offset of [-0.08, 0.08]) {
+      const pulse = new THREE.Mesh(
+        new THREE.SphereGeometry(0.075, 10, 8),
+        material.clone(),
+      );
+      pulse.position.x = offset;
+      group.add(pulse);
+    }
+    return group;
+  }
+  if (mode === "hero-support" && heroId === "youngbeom") {
+    return new THREE.Mesh(new THREE.IcosahedronGeometry(0.14, 1), material);
+  }
+  if (mode === "hero-support" && heroId === "jungwoo") {
+    return new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.3, 0.22), material);
+  }
+  if (mode === "hero-support") {
+    return new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 10), material);
+  }
+  return new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.32, 8), material);
+}
+
+function createFleetSupportOutcomes() {
+  return companionTracks
+    .filter((track) => track.sample.actual)
+    .map((track, index) => {
+      const prediction = track.sample.predictions[state.method];
+      const actual = track.sample.actual;
+      const errorMeters = Math.hypot(
+        prediction[0] - actual[0],
+        prediction[1] - actual[1],
+        prediction[2] - actual[2],
+      );
+      const hit = errorMeters <= HIT_RADIUS_METERS;
+      const heroUnit =
+        !hit && heroUnits.length > 0
+          ? heroUnits[Math.floor(Math.random() * heroUnits.length)]
+          : null;
+      const mode = hit ? "base-defense" : heroUnit ? "hero-support" : "base-attack";
+      const color =
+        mode === "base-defense"
+          ? COLORS.green
+          : mode === "hero-support"
+            ? HEROES[heroUnit.id].accent
+            : COLORS.red;
+      const target = companionToWorld(actual, track);
+      const start =
+        mode === "base-defense"
+          ? baseLaunchWorld()
+          : mode === "hero-support"
+            ? heroUnit.group.position.clone()
+            : target.clone();
+      const end = mode === "base-attack" ? baseTargetWorld() : target.clone();
+      const group = new THREE.Group();
+      const projectile = createSupportProjectile(mode, heroUnit?.id ?? null, color);
+      projectile.position.copy(start);
+      projectile.visible = false;
+      group.add(projectile);
+
+      const beam = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([start, start]),
+        new THREE.LineBasicMaterial({
+          color,
+          transparent: true,
+          opacity: 0,
+          blending: THREE.AdditiveBlending,
+        }),
+      );
+      group.add(beam);
+
+      const impactRing = new THREE.Mesh(
+        new THREE.RingGeometry(0.16, 0.22, 36),
+        new THREE.MeshBasicMaterial({
+          color,
+          transparent: true,
+          opacity: 0,
+          side: THREE.DoubleSide,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        }),
+      );
+      impactRing.position.copy(end);
+      impactRing.visible = false;
+      group.add(impactRing);
+
+      const impactLight = new THREE.PointLight(color, 0, 5);
+      impactLight.position.copy(end);
+      group.add(impactLight);
+      effectsGroup.add(group);
+
+      return {
+        track,
+        mode,
+        heroId: heroUnit?.id ?? null,
+        errorMeters,
+        group,
+        projectile,
+        beam,
+        impactRing,
+        impactLight,
+        start,
+        end,
+        delay: 0.12 + index * 0.1,
+        duration: mode === "base-attack" ? 0.78 : 0.66,
+        resolved: false,
+        destroyedRecorded: false,
+      };
+    });
+}
+
+function updateFleetSupportOutcomes(elapsed) {
+  const supportEffects = state.outcome?.supportEffects ?? [];
+  if (supportEffects.length === 0) {
+    return;
+  }
+
+  for (const support of supportEffects) {
+    const localTime = elapsed - support.delay;
+    if (localTime < 0) {
+      continue;
+    }
+    const progress = THREE.MathUtils.clamp(localTime / support.duration, 0, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    support.projectile.visible = progress < 1;
+    support.projectile.position.lerpVectors(support.start, support.end, eased);
+    support.projectile.rotation.x += 0.16;
+    support.projectile.rotation.z += 0.12;
+    support.beam.geometry.dispose();
+    support.beam.geometry = new THREE.BufferGeometry().setFromPoints([
+      support.start,
+      support.projectile.position,
+    ]);
+    support.beam.material.opacity = Math.sin(progress * Math.PI) * 0.72;
+
+    if (progress >= 1 && !support.resolved) {
+      support.resolved = true;
+      support.projectile.visible = false;
+      support.beam.material.opacity = 0;
+      support.impactRing.visible = true;
+      support.impactLight.intensity = 4.5;
+      if (support.mode === "base-attack") {
+        damageBase();
+        setBaseAlert(true);
+      } else {
+        support.track.drone.group.visible = false;
+        recordDroneDestroyed(support);
+      }
+    }
+
+    if (support.resolved) {
+      const impactElapsed = Math.max(0, localTime - support.duration);
+      support.impactRing.quaternion.copy(camera.quaternion);
+      support.impactRing.scale.setScalar(1 + impactElapsed * 4.2);
+      support.impactRing.material.opacity = Math.max(0, 0.9 - impactElapsed * 1.4);
+      support.impactLight.intensity = Math.max(0, 4.5 - impactElapsed * 6);
+    }
+  }
+
+  if (
+    supportEffects.every((support) => support.resolved)
+    && !state.outcome.supportSummaryShown
+  ) {
+    state.outcome.supportSummaryShown = true;
+    const primaryDestroyed = state.outcome.type === "hit" || state.outcome.heroId ? 1 : 0;
+    const supportDestroyed = supportEffects.filter(
+      (support) => support.mode !== "base-attack",
+    ).length;
+    const breached = supportEffects.filter(
+      (support) => support.mode === "base-attack",
+    ).length + (primaryDestroyed ? 0 : 1);
+    elements.outcomeKicker.textContent = "FLEET RESOLUTION COMPLETE";
+    elements.outcomeDetail.textContent =
+      `${primaryDestroyed + supportDestroyed} DESTROYED · ${breached} BREACHED`;
+  }
+}
+
 function showOutcomeOverlay(type, errorMeters, heroId = null) {
   const hit = type === "hit";
   const hero = heroId ? HEROES[heroId] : null;
@@ -1793,6 +1977,7 @@ function triggerOutcome(now) {
     damageApplied: false,
     impactApplied: false,
   };
+  state.outcome.supportEffects = createFleetSupportOutcomes();
   showOutcomeOverlay(type, errorMeters, heroUnit?.id);
   setTargetColor(type === "hit" ? COLORS.amber : COLORS.red);
   errorLine.visible = true;
@@ -1822,6 +2007,10 @@ function triggerOutcome(now) {
 function updateHeroUnits(now) {
   const elapsed = now * 0.001;
   const rotationAxis = new THREE.Vector3(0, 1, 0);
+  const escortDrones = [
+    drone.group,
+    ...companionTracks.map((track) => track.drone.group),
+  ];
 
   for (const unit of heroUnits) {
     const pulse = 0.82 + Math.sin(elapsed * 8 + unit.slot) * 0.18;
@@ -1834,11 +2023,15 @@ function updateHeroUnits(now) {
       continue;
     }
 
-    const offset = unit.offset.clone().applyAxisAngle(rotationAxis, drone.group.rotation.y * 0.4);
-    const desired = drone.group.position.clone().add(offset);
+    const escort = escortDrones[unit.slot % escortDrones.length];
+    const offset = unit.offset
+      .clone()
+      .multiplyScalar(0.72)
+      .applyAxisAngle(rotationAxis, escort.rotation.y * 0.4);
+    const desired = escort.position.clone().add(offset);
     desired.y += Math.sin(elapsed * 3.4 + unit.slot * 1.7) * 0.12;
     unit.group.position.lerp(desired, 0.1);
-    unit.group.rotation.y = drone.group.rotation.y + Math.PI;
+    unit.group.rotation.y = escort.rotation.y + Math.PI;
     unit.model.rotation.z = Math.sin(elapsed * 2.2 + unit.slot) * 0.055;
     unit.model.rotation.x = -0.1 + Math.sin(elapsed * 2.8 + unit.slot) * 0.025;
   }
@@ -2050,6 +2243,7 @@ function updateOutcomeEffect(now) {
       effect.impactLight.intensity = 0;
     }
   }
+  updateFleetSupportOutcomes(elapsed);
 }
 
 function rebuildTrajectory() {
